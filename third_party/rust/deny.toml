@@ -1,0 +1,34 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+[advisories]
+version = 2
+ignore = [
+    "RUSTSEC-2023-0071", # `rsa`, decryption is vulnerable to timing attack. We only sign/verify.
+]
+unmaintained = "workspace"
+
+[bans]
+skip = [
+    { crate = "core-foundation", reason = "multiple versions" },
+    { crate = "getrandom", reason = "multiple versions" },
+    { crate = "syn", reason = "multiple versions" },
+]
+
+[licenses]
+version = 2
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-3-Clause",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+]
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
