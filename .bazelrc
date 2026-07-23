@@ -1,0 +1,33 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+# Enable bzlmod with `MODULE.bazel` and disable the `WORKSPACE` system.
+common --enable_bzlmod
+common --enable_workspace=no
+
+# Do not attempt to configure an autodetected (local) toolchain - this is
+# pulled in hermetically.
+common --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+
+build --action_env=BAZEL_CXXOPTS="-std=gnu++17"
+build --cxxopt='-std=gnu++17'
+build --conlyopt='-std=gnu11'
+
+# Enable the rust nightly toolchain
+build --@rules_rust//rust/toolchain/channel=nightly
+
+# Configure the rust 'clippy' linter.
+build --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect
+build --output_groups=+clippy_checks
+build --@rules_rust//:clippy_flags="-Wclippy::undocumented_unsafe_blocks,-Dwarnings"
+
+# Import site-specific local configuration overrides.
+try-import %workspace%/.bazelrc-site
+
+# cquery output option.
+cquery --output=files
+
+# Enable strict action env. This will prevent `PATH` and `LD_LIBRARY_PATH` from being passed into the sandbox
+# which would help the cacheability.
+build --incompatible_strict_action_env
