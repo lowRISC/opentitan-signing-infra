@@ -278,6 +278,44 @@
         ]
       }
     },
+    "//third_party/sphincsplus:extensions.bzl%sphincsplus": {
+      "general": {
+        "bzlTransitiveDigest": "nCZKDxHtSncszKIrCgE9IQlXlpMgQIlcZoK8V9C5oR8=",
+        "usagesDigest": "CmH4EB7RhvRBCB/4PL+vw26xmITxDwHAFTSTRAYV/0A=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "sphincsplus_fips205_ipd": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "url": "https://github.com/sphincs/sphincsplus/archive/129b72c80e122a22a61f71b5d2b042770890ccee.tar.gz",
+              "strip_prefix": "sphincsplus-129b72c80e122a22a61f71b5d2b042770890ccee/ref",
+              "build_file": "@@//third_party/sphincsplus:BUILD.sphincsplus.bazel",
+              "sha256": "b301faa7a42ef538323a732929d49341b1cbd8375f643f7d98ca32cd6efacc32",
+              "patches": [
+                "@@//third_party/sphincsplus/patches:sphincsplus-namespace.patch"
+              ],
+              "patch_args": [
+                "-p2"
+              ]
+            }
+          }
+        },
+        "recordedRepoMappingEntries": [
+          [
+            "",
+            "bazel_tools",
+            "bazel_tools"
+          ],
+          [
+            "",
+            "opentitan_signing_infra",
+            ""
+          ]
+        ]
+      }
+    },
     "@@aspect_bazel_lib+//lib:extensions.bzl%toolchains": {
       "general": {
         "bzlTransitiveDigest": "/eG4ezrk5ms110RBTeAeqM23K05vyvIugNVKn7h5+28=",

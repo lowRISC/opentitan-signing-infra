@@ -158,3 +158,7 @@ register_toolchains("@pythons_hub//:all")
 # Patched SoftHSM 2, for use with hsmtool in testing
 hsm = use_extension("//third_party/hsm:extensions.bzl", "hsm", dev_dependency = True)
 use_repo(hsm, "softhsm2")
+
+# Patched sphincsplus libraries to include appropriate SLH-DSA / SPHINCS+ support
+sphincsplus = use_extension("//third_party/sphincsplus:extensions.bzl", "sphincsplus")
+use_repo(sphincsplus, "sphincsplus_fips205_ipd")
