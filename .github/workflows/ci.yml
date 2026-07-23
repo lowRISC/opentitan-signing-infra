@@ -1,0 +1,107 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI
+on:
+  pull_request:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint checks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # Required so that we can lint commit messages.
+
+      - name: Install system test dependencies
+        run: sudo apt update && sudo apt install -y python3-git
+
+      - name: Setup Bazel
+        id: setup_bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: false
+          disk-cache: false
+          repository-cache: false
+
+      - name: Check Git commit metadata
+        if: success() || failure()
+        run: ./scripts/ci/lint_commits.sh "$GITHUB_BASE_REF"
+
+      - name: Check license headers
+        if: success() || failure()
+        run: bazelisk run //quality:license_check
+
+      - name: Check Rust formatting
+        if: success() || failure()
+        run: bazelisk test //quality:rustfmt_check
+
+      - name: Check Rust dependencies
+        if: success() || failure()
+        uses: EmbarkStudios/cargo-deny-action@v2
+        # FIXME: Resolve existing errors with `ml-dsa` and `paste` and remove this line
+        continue-on-error: true
+        with:
+          manifest-path: ./third_party/rust/Cargo.toml
+          command: check bans licenses sources
+          arguments: --locked
+
+      # We run advisories separately so new advisories do not block CI
+      - name: Check Rust dependency advisories
+        if: success() || failure()
+        uses: EmbarkStudios/cargo-deny-action@v2
+        continue-on-error: true
+        with:
+          manifest-path: ./third_party/rust/Cargo.toml
+          command: check advisories
+          arguments: --locked
+
+      - name: Check Bazel formatting
+        if: success() || failure()
+        run: bazelisk test //quality:buildifier_check
+
+      - name: Check for uncommitted Bazel lockfile changes
+        if: success() || failure()
+        run: |
+          bazelisk mod deps --lockfile_mode=update
+          git diff --exit-code MODULE.bazel.lock
+
+      - name: Check for uncommitted Cargo lockfile changes
+        if: success() || failure()
+        run: |
+          touch third_party/rust/fake.rs
+          cargo check --locked --manifest-path=third_party/rust/Cargo.toml
+
+  build:
+    name: Build and test software
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install system test dependencies
+        run: sudo apt update && sudo apt install -y python3-git
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: false
+          disk-cache: false
+          repository-cache: false
+
+      - name: Build Software
+        run: bazelisk build //...
+
+      - name: Run hsmtool tests
+        run: bazelisk test --test_output=all --build_tests_only //hsmtool/...
