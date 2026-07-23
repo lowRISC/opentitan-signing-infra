@@ -1,0 +1,59 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+load("@aspect_rules_lint//format:defs.bzl", "format_multirun", "format_test")
+
+package(default_visibility = ["//visibility:public"])
+
+alias(
+    name = "rustfmt",
+    actual = "@rules_rust//tools/upstream_wrapper:rustfmt",
+)
+
+alias(
+    name = "buildifier",
+    actual = "@buildifier_prebuilt//:buildifier",
+)
+
+# Run all formatters.
+format_multirun(
+    name = "format",
+    rust = ":rustfmt",
+    starlark = ":buildifier",
+)
+
+# Check all formatting.
+format_test(
+    name = "format_check",
+    no_sandbox = True,
+    rust = ":rustfmt",
+    starlark = ":buildifier",
+    workspace = "//:MODULE.bazel",
+)
+
+# Run `rustfmt` on all Rust code.
+alias(
+    name = "rustfmt_fix",
+    actual = ":format_Rust_with_rustfmt",
+)
+
+# Check formatting on all Rust code.
+test_suite(
+    name = "rustfmt_check",
+    tags = ["manual"],
+    tests = [":format_check_Rust_with_rustfmt"],
+)
+
+# Format all `BUILD` and `.bzl` files in the project.
+alias(
+    name = "buildifier_fix",
+    actual = ":format_Starlark_with_buildifier",
+)
+
+# Check formatting for all Bazel `BUILD` and `.bzl` files.
+test_suite(
+    name = "buildifier_check",
+    tags = ["manual"],
+    tests = [":format_check_Starlark_with_buildifier"],
+)
