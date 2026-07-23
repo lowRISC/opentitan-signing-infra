@@ -31,6 +31,16 @@ bazel_dep(
     version = "6.4.0",
     dev_dependency = True,
 )
+bazel_dep(
+    name = "lowrisc_misc_linters",
+    dev_dependency = True,
+)
+archive_override(
+    module_name = "lowrisc_misc_linters",
+    integrity = "sha256-eRFiSjD638NuOjDDScMuEKVYpmotDY0yX3jxYL/d3ac=",
+    strip_prefix = "misc-linters-20250217_01",
+    urls = ["https://github.com/lowRISC/misc-linters/archive/refs/tags/20250217_01.tar.gz"],
+)
 
 # Rust Toolchain
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
