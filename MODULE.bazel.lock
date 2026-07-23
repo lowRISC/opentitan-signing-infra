@@ -376,8 +376,8 @@
     },
     "@@rules_python+//python/extensions:pip.bzl%pip": {
       "general": {
-        "bzlTransitiveDigest": "aOLWF+I2jZVXviSPbkO6RSyr475j3Gm3W6UAtUEJIu0=",
-        "usagesDigest": "opehPtHqqzm/GuNd4rMsIfMbwEt6PZHbMDUaYL+XXh4=",
+        "bzlTransitiveDigest": "eUGiLWuw2gcVW0M4l1fdcVX8ZvYEG18hAZMu13AodWA=",
+        "usagesDigest": "bRTyizJHOmX4SZA6t4qbmtjq6rYovzXOQldJluE/Z6Q=",
         "recordedFileInputs": {
           "@@protobuf+//python/requirements.txt": "983be60d3cec4b319dcab6d48aeb3f5b2f7c3350f26b3a9e97486c37967c73c5",
           "@@rules_fuzzing+//fuzzing/requirements.txt": "ab04664be026b632a0d2a2446c4f65982b7654f5b6851d2f9d399a19b7242a5b",

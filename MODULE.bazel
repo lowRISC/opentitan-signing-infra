@@ -10,6 +10,7 @@ module(
 # Bazel dependencies
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.4")
+bazel_dep(name = "rules_python", version = "1.2.0")
 bazel_dep(name = "rules_rust_bindgen", version = "0.59.2")
 bazel_dep(name = "rules_rust", version = "0.59.2")
 
@@ -102,3 +103,21 @@ use_repo(crate, "rust_opentitan_signing_crates")
 # lowRISC fork of `serde_annotate`, carrying additional patches.
 serde_annotate = use_extension("//third_party/rust:extensions.bzl", "serde_annotate")
 use_repo(serde_annotate, "lowrisc_serde_annotate")
+
+# Python toolchain, used for Python scripting (for PKCSCS#11 attribute conversion) and
+# for the license_check lint.
+# FIXME: The upstream license check lint rule uses outdated `pip` dependencies that are
+# only available for Python 3.10; ideally upstream dependencies should be updated, so
+# that we don't need to pin an older Python toolchain version of 3.10 here.
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    # Required for usage in CI containers, which run as the `root` user.
+    # We lose caching of `.pyc` files as a result.
+    # See <https://github.com/bazelbuild/rules_python/pull/713>.
+    ignore_root_user_error = True,
+    is_default = True,
+    python_version = "3.10",
+)
+use_repo(python, "pythons_hub")
+
+register_toolchains("@pythons_hub//:all")
