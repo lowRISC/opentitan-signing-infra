@@ -1,0 +1,95 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+module(
+    name = "opentitan_signing_infra",
+    version = "0.0.0",
+)
+
+# Bazel dependencies
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_cc", version = "0.2.4")
+bazel_dep(name = "rules_rust_bindgen", version = "0.59.2")
+bazel_dep(name = "rules_rust", version = "0.59.2")
+bazel_dep(name = "toolchains_llvm", version = "1.1.2", dev_dependency = True)
+
+# Rust Toolchain
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.repository_set(
+    name = "rust_hsmtool",
+    edition = "2024",
+    exec_triple = "x86_64-unknown-linux-gnu",
+    sha256s = {
+        "rustc-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "48c2a42de9e92fcae8c24568f5fe40d5734696a6f80e83cc6d46eef1a78f13c9",
+        "clippy-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "5b6466419693a05365827378145014a37ae74fb2948fab390d5210a524792ed8",
+        "cargo-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "9853db03d68578a30972e2755c89c66aec035fec641cf8f3a7117c81eec2578d",
+        "llvm-tools-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "1376ef6021578fcfe94fad66396f7ca6d2f19bda5a417f8746a2b32ccf3f4470",
+        "rust-std-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "663f4ab7945b392d5e5294dec1b050a66820a20e86f084ec37eeb0f2f7ff5569",
+    },
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    target_triple = "x86_64-unknown-linux-gnu",
+    versions = ["1.90.0"],
+)
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+# Pinned LLVM & Rust Bindgen toolchain for local development, to avoid compiling LLVM from source
+# (see comment in `third_party/rust/BUILD.bazel` for more information).
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
+llvm.toolchain(
+    name = "llvm_toolchain",
+    llvm_versions = {"": "10.0.0"},
+    sha256 = {"": "b25f592a0c00686f03e3b7db68ca6dc87418f681f4ead4df4745a01d9be63843"},
+)
+use_repo(llvm, "llvm_toolchain_llvm")
+
+register_toolchains(
+    "//third_party/rust:bindgen_toolchain",
+    dev_dependency = True,
+)
+
+# Rust Crates
+crate = use_extension("@rules_rust//crate_universe:extension.bzl", "crate")
+crate.from_cargo(
+    name = "rust_opentitan_signing_crates",
+    cargo_lockfile = "//third_party/rust:Cargo.lock",
+    manifests = ["//third_party/rust:Cargo.toml"],
+    # By default, `rules_rust` will analyze dependencies for all supported target triples - which is very slow.
+    # Restrict to only the one(s) that we're interested in. See: https://github.com/bazelbuild/rules_rust/issues/2876
+    supported_platform_triples = [
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-gnu",
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+    ],
+)
+crate.annotation(
+    crate = "cryptoki",
+    repositories = ["rust_opentitan_signing_crates"],
+)
+crate.annotation(
+    additive_build_file_content = """
+        filegroup(
+            name = "cryptoki-sys-binding-srcs",
+            srcs = [
+                "src/bindings/x86_64-unknown-linux-gnu.rs",
+            ],
+            visibility = ["//visibility:public"],
+        )
+    """,
+    crate = "cryptoki-sys",
+    extra_aliased_targets = {
+        "cryptoki-sys-binding-srcs": "cryptoki-sys-binding-srcs",
+    },
+    repositories = ["rust_opentitan_signing_crates"],
+)
+use_repo(crate, "rust_opentitan_signing_crates")
+
+# lowRISC fork of `serde_annotate`, carrying additional patches.
+serde_annotate = use_extension("//third_party/rust:extensions.bzl", "serde_annotate")
+use_repo(serde_annotate, "lowrisc_serde_annotate")

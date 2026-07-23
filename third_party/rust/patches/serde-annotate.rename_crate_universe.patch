@@ -1,0 +1,212 @@
+diff --git a/WORKSPACE.bazel b/WORKSPACE.bazel
+index 250786f..cf69ee8 100644
+--- a/WORKSPACE.bazel
++++ b/WORKSPACE.bazel
+@@ -16,7 +16,7 @@ crate_universe_dependencies()
+ 
+ load("@rules_rust//crate_universe:defs.bzl", "crates_repository")
+ crates_repository(
+-    name = "crate_index",
++    name = "rust_opentitan_signing_crates",
+     cargo_lockfile = "//:Cargo.lock",
+     lockfile = "//:Cargo.Bazel.lock",
+     manifests = [
+@@ -26,5 +26,5 @@ crates_repository(
+     ],
+ )
+ 
+-load("@crate_index//:defs.bzl", "crate_repositories")
++load("@rust_opentitan_signing_crates//:defs.bzl", "crate_repositories")
+ crate_repositories()
+diff --git a/serde_annotate/BUILD.bazel b/serde_annotate/BUILD.bazel
+index 5b2c468..702f22e 100644
+--- a/serde_annotate/BUILD.bazel
++++ b/serde_annotate/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
++load("@rust_opentitan_signing_crates//:defs.bzl", "aliases", "all_crate_deps")
+ load(
+     "@rules_rust//rust:defs.bzl",
+     "rust_binary",
+@@ -32,7 +32,7 @@ rust_library(
+     edition = "2021",
+     proc_macro_deps = [
+         "//serde_annotate_derive",
+-        "@crate_index//:pest_derive",
++        "@rust_opentitan_signing_crates//:pest_derive",
+     ],
+     rustc_flags = [
+         "--cap-lints=allow",
+@@ -42,14 +42,14 @@ rust_library(
+     ],
+     version = "0.1.0",
+     deps = [
+-        "@crate_index//:anstyle",
+-        "@crate_index//:num-traits",
+-        "@crate_index//:once_cell",
+-        "@crate_index//:pest",
+-        "@crate_index//:regex",
+-        "@crate_index//:scopeguard",
+-        "@crate_index//:serde",
+-        "@crate_index//:thiserror",
++        "@rust_opentitan_signing_crates//:anstyle",
++        "@rust_opentitan_signing_crates//:num-traits",
++        "@rust_opentitan_signing_crates//:once_cell",
++        "@rust_opentitan_signing_crates//:pest",
++        "@rust_opentitan_signing_crates//:regex",
++        "@rust_opentitan_signing_crates//:scopeguard",
++        "@rust_opentitan_signing_crates//:serde",
++        "@rust_opentitan_signing_crates//:thiserror",
+     ],
+ )
+ 
+@@ -61,14 +61,14 @@ rust_test(
+     ),
+     crate = ":serde_annotate",
+     proc_macro_deps = [
+-        "@crate_index//:serde_derive",
++        "@rust_opentitan_signing_crates//:serde_derive",
+     ],
+     deps = [
+-        "@crate_index//:anyhow",
+-        "@crate_index//:deser-hjson",
+-        "@crate_index//:json5",
+-        "@crate_index//:serde_bytes",
+-        "@crate_index//:serde_json",
+-        "@crate_index//:serde_yaml",
++        "@rust_opentitan_signing_crates//:anyhow",
++        "@rust_opentitan_signing_crates//:deser-hjson",
++        "@rust_opentitan_signing_crates//:json5",
++        "@rust_opentitan_signing_crates//:serde_bytes",
++        "@rust_opentitan_signing_crates//:serde_json",
++        "@rust_opentitan_signing_crates//:serde_yaml",
+     ],
+ )
+diff --git a/serde_annotate/examples/BUILD.bazel b/serde_annotate/examples/BUILD.bazel
+index 1cbcb00..09d9f77 100644
+--- a/serde_annotate/examples/BUILD.bazel
++++ b/serde_annotate/examples/BUILD.bazel
+@@ -20,14 +20,14 @@ rust_binary(
+     edition = "2021",
+     proc_macro_deps = [
+         "//serde_annotate_derive",
+-        "@crate_index//:serde_derive",
++        "@rust_opentitan_signing_crates//:serde_derive",
+     ],
+     deps = [
+         "//serde_annotate",
+-        "@crate_index//:anstyle",
+-        "@crate_index//:anyhow",
+-        "@crate_index//:clap",
+-        "@crate_index//:serde",
++        "@rust_opentitan_signing_crates//:anstyle",
++        "@rust_opentitan_signing_crates//:anyhow",
++        "@rust_opentitan_signing_crates//:clap",
++        "@rust_opentitan_signing_crates//:serde",
+     ],
+ )
+ 
+@@ -37,15 +37,15 @@ rust_binary(
+     edition = "2021",
+     proc_macro_deps = [
+         "//serde_annotate_derive",
+-        "@crate_index//:serde_derive",
++        "@rust_opentitan_signing_crates//:serde_derive",
+     ],
+     deps = [
+         "//serde_annotate",
+-        "@crate_index//:anstyle",
+-        "@crate_index//:anyhow",
+-        "@crate_index//:clap",
+-        "@crate_index//:serde",
+-        "@crate_index//:serde_bytes",
++        "@rust_opentitan_signing_crates//:anstyle",
++        "@rust_opentitan_signing_crates//:anyhow",
++        "@rust_opentitan_signing_crates//:clap",
++        "@rust_opentitan_signing_crates//:serde",
++        "@rust_opentitan_signing_crates//:serde_bytes",
+     ],
+ )
+ 
+@@ -55,13 +55,13 @@ rust_binary(
+     edition = "2021",
+     proc_macro_deps = [
+         "//serde_annotate_derive",
+-        "@crate_index//:serde_derive",
++        "@rust_opentitan_signing_crates//:serde_derive",
+     ],
+     deps = [
+         "//serde_annotate",
+-        "@crate_index//:anstyle",
+-        "@crate_index//:anyhow",
+-        "@crate_index//:clap",
+-        "@crate_index//:serde",
++        "@rust_opentitan_signing_crates//:anstyle",
++        "@rust_opentitan_signing_crates//:anyhow",
++        "@rust_opentitan_signing_crates//:clap",
++        "@rust_opentitan_signing_crates//:serde",
+     ],
+ )
+diff --git a/serde_annotate/tests/BUILD.bazel b/serde_annotate/tests/BUILD.bazel
+index 72a382d..1d2e9f7 100644
+--- a/serde_annotate/tests/BUILD.bazel
++++ b/serde_annotate/tests/BUILD.bazel
+@@ -20,17 +20,17 @@ rust_test(
+     edition = "2021",
+     proc_macro_deps = [
+         "//serde_annotate_derive",
+-        "@crate_index//:serde_derive",
++        "@rust_opentitan_signing_crates//:serde_derive",
+     ],
+     deps = [
+         "//serde_annotate",
+-        "@crate_index//:anyhow",
+-        "@crate_index//:deser-hjson",
+-        "@crate_index//:json5",
+-        "@crate_index//:serde",
+-        "@crate_index//:serde_bytes",
+-        "@crate_index//:serde_json",
+-        "@crate_index//:serde_yaml",
++        "@rust_opentitan_signing_crates//:anyhow",
++        "@rust_opentitan_signing_crates//:deser-hjson",
++        "@rust_opentitan_signing_crates//:json5",
++        "@rust_opentitan_signing_crates//:serde",
++        "@rust_opentitan_signing_crates//:serde_bytes",
++        "@rust_opentitan_signing_crates//:serde_json",
++        "@rust_opentitan_signing_crates//:serde_yaml",
+     ],
+ )
+ 
+@@ -40,12 +40,12 @@ rust_test(
+     edition = "2021",
+     proc_macro_deps = [
+         "//serde_annotate_derive",
+-        "@crate_index//:serde_derive",
++        "@rust_opentitan_signing_crates//:serde_derive",
+     ],
+     deps = [
+         "//serde_annotate",
+-        "@crate_index//:anyhow",
+-        "@crate_index//:erased-serde",
+-        "@crate_index//:serde",
++        "@rust_opentitan_signing_crates//:anyhow",
++        "@rust_opentitan_signing_crates//:erased-serde",
++        "@rust_opentitan_signing_crates//:serde",
+     ],
+ )
+diff --git a/serde_annotate_derive/BUILD.bazel b/serde_annotate_derive/BUILD.bazel
+index 41c6570..859806e 100644
+--- a/serde_annotate_derive/BUILD.bazel
++++ b/serde_annotate_derive/BUILD.bazel
+@@ -34,8 +34,8 @@ rust_proc_macro(
+     ],
+     version = "0.1.0",
+     deps = [
+-        "@crate_index//:proc-macro2",
+-        "@crate_index//:quote",
+-        "@crate_index//:syn",
++        "@rust_opentitan_signing_crates//:proc-macro2",
++        "@rust_opentitan_signing_crates//:quote",
++        "@rust_opentitan_signing_crates//:syn",
+     ],
+ )
