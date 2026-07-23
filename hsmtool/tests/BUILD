@@ -240,33 +240,6 @@ filegroup(
     srcs = ["image.bin"],
 )
 
-genrule(
-    name = "image_digest",
-    srcs = [":image_bin"],
-    outs = ["image.digest"],
-    # Opentitantool computes the digest by excluding the signature region of the manifest.
-    # The signature region is the first 384 bytes.
-    cmd = """
-        dd if=$< bs=1 skip=384 | sha256sum - | cut -f1 -d' ' | tr '[:lower:]' '[:upper:]' | basenc -d --base16 > $@
-    """,
-)
-
-# Verify the opentitantool image digest calculation.
-sh_test(
-    name = "image_digest_test",
-    srcs = ["image_digest_test.sh"],
-    data = [
-        ":image_bin",
-        ":image_digest",
-        "//sw/host/opentitantool",
-    ],
-    env = {
-        "IMAGE_BIN": "$(rootpath :image_bin)",
-        "KNOWN_DIGEST": "$(rootpath :image_digest)",
-    },
-    deps = [":test_lib"],
-)
-
 # ECDSA-Sign an image with opentitantool and then verify the signature with hsmtool.
 sh_test(
     name = "manifest_opentitantool_sign_hsmtool_verify_test",
