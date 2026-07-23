@@ -8,6 +8,8 @@ package(default_visibility = ["//visibility:public"])
 
 cc_library(
     name = "acorn_hdr",
+    # Unused, forces compilation of a static library for rules_rust_bindgen
+    srcs = ["dummy.c"],
     hdrs = ["acorn.h"],
 )
 
