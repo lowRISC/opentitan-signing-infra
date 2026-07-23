@@ -5,7 +5,7 @@
 load("@rules_rust_bindgen//:defs.bzl", "rust_bindgen_library")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//visibility:private"])
 
 # NOTE: By convention, the bindgen crate name and the preprocessor NAMESPACE
 # value need to contain the same algorithm variant name, as:
@@ -58,6 +58,7 @@ rust_library(
     proc_macro_deps = [
         "@rust_opentitan_signing_crates//:paste",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         ":bindgen_sha2_128s_simple",
         ":bindgen_shake_128s_simple",

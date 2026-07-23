@@ -4,11 +4,12 @@
 
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_doc", "rust_library", "rust_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//visibility:private"])
 
 filegroup(
     name = "doc_files",
     srcs = glob(["**/*.md"]),
+    visibility = ["//visibility:public"],
 )
 
 alias(
@@ -179,6 +180,7 @@ rust_library(
         "MECHANISM_TYPE": "$(location :mechanism_type)",
         "OBJECT_CLASS": "$(location :object_class)",
     },
+    visibility = ["//visibility:public"],
     deps = [
         "//hsmtool/acorn",
         "//hsmtool/sphincsplus",
@@ -223,6 +225,7 @@ rust_library(
 rust_binary(
     name = "hsmtool",
     srcs = ["src/hsmtool.rs"],
+    visibility = ["//visibility:public"],
     deps = [
         ":hsmlib",
         "@rust_opentitan_signing_crates//:anyhow",
@@ -247,4 +250,5 @@ rust_test(
 rust_doc(
     name = "hsmlib_doc",
     crate = ":hsmlib",
+    visibility = ["//visibility:public"],
 )

@@ -2,11 +2,12 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//visibility:private"])
 
 sh_library(
     name = "test_lib",
     srcs = ["test_lib.sh"],
+    visibility = ["//visibility:public"],
 )
 
 sh_test(
@@ -36,6 +37,7 @@ genrule(
     cmd = """
         sha256sum $< | cut -f1 -d' ' | tr '[:lower:]' '[:upper:]' | basenc -d --base16 > $@
     """,
+    visibility = ["//visibility:public"],
 )
 
 # ECDSA-Sign a digest with opentitantool and then verify the signature with hsmtool.
@@ -242,6 +244,7 @@ filegroup(
     #
     # This sets the identifier, manifest_version, signed_region_end and length fields.
     srcs = ["image.bin"],
+    visibility = ["//visibility:public"],
 )
 
 # ECDSA-Sign an image with opentitantool and then verify the signature with hsmtool.
