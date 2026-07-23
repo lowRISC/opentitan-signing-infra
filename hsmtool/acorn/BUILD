@@ -16,11 +16,11 @@ rust_library(
     ],
     crate_root = "lib.rs",
     deps = [
-        "//sw/host/hsmtool/acorn/vendor:acorn_bindgen",
-        "//sw/host/sphincsplus",
-        "@crate_index//:anyhow",
-        "@crate_index//:bitflags",
-        "@crate_index//:libloading",
-        "@crate_index//:thiserror",
+        "//hsmtool/acorn/vendor:acorn_bindgen",
+        "//hsmtool/sphincsplus",
+        "@rust_opentitan_signing_crates//:anyhow",
+        "@rust_opentitan_signing_crates//:bitflags",
+        "@rust_opentitan_signing_crates//:libloading",
+        "@rust_opentitan_signing_crates//:thiserror",
     ],
 )

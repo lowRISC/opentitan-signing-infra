@@ -19,9 +19,9 @@ sh_test(
         "list",
     ],
     data = [
+        "//hsmtool",
         "//signing/softhsm",
         "//signing/softhsm:conf",
-        "//sw/host/hsmtool",
         "@softhsm2//:gen_dir",
     ],
     env = {
@@ -44,20 +44,21 @@ sh_test(
     srcs = ["ot_hsm_runner.sh"],
     data = [
         ":tqbf_digest",
+        "//hsmtool",
         "//signing/softhsm",
         "//signing/softhsm:conf",
-        "//sw/device/silicon_creator/lib/ownership/keys/fake:ecdsa_keyset",
-        "//sw/host/hsmtool",
-        "//sw/host/opentitantool",
+        "@opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.der",
+        "@opentitan_devbundle//:opentitantool/opentitantool",
         "@softhsm2//:gen_dir",
     ],
     env = {
+        "OPENTITANTOOL": "$(rootpath @opentitan_devbundle//:opentitantool/opentitantool)",
         "SOFTHSM2_CONF": "$(rootpath //signing/softhsm:conf)",
         "FIRST": "opentitantool",
         "OTTOOL_ARGS": """
             --rcfile=
             ecdsa sign
-                sw/device/silicon_creator/lib/ownership/keys/fake/app_prod_ecdsa_p256.der
+                $(rootpath @opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.der)
                 --input=$(rootpath :tqbf_digest)
                 --output=tqbf.ecdsa_sig
         """,
@@ -81,14 +82,15 @@ sh_test(
     data = [
         "tqbf.txt",
         ":tqbf_digest",
+        "//hsmtool",
         "//signing/softhsm",
         "//signing/softhsm:conf",
-        "//sw/device/silicon_creator/lib/ownership/keys/fake:app_prod_ecdsa_pub",
-        "//sw/host/hsmtool",
-        "//sw/host/opentitantool",
+        "@opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.pub.der",
+        "@opentitan_devbundle//:opentitantool/opentitantool",
         "@softhsm2//:gen_dir",
     ],
     env = {
+        "OPENTITANTOOL": "$(rootpath @opentitan_devbundle//:opentitantool/opentitantool)",
         "SOFTHSM2_CONF": "$(rootpath //signing/softhsm:conf)",
         "FIRST": "hsmtool",
         "OTTOOL_ARGS": """
@@ -96,7 +98,7 @@ sh_test(
             ecdsa verify
                 --digest-file=$(rootpath :tqbf_digest)
                 --signature-file=tqbf.ecdsa_sig
-                sw/device/silicon_creator/lib/ownership/keys/fake/app_prod_ecdsa_p256.pub.der
+                $(rootpath @opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.pub.der)
         """,
         "HSMTOOL_MODULE": "$(rootpath @softhsm2//:gen_dir)/lib/softhsm/libsofthsm2.so",
         # This hsmtool invocation computes the digest from the plain-text `tqbf.txt` input file.
@@ -107,7 +109,7 @@ sh_test(
                 --format=plain-text
                 --label=fake_app_prod_ecdsa
                 --output=tqbf.ecdsa_sig
-                sw/host/hsmtool/tests/tqbf.txt
+                hsmtool/tests/tqbf.txt
         """,
     },
     deps = [":test_lib"],
@@ -138,14 +140,15 @@ _SPX_TESTS = {
         srcs = ["ot_hsm_runner.sh"],
         data = [
             ":tqbf_digest",
+            "//hsmtool",
             "//signing/softhsm",
             "//signing/softhsm:conf",
-            "//sw/device/silicon_creator/lib/ownership/keys/fake:spx_keyset",
-            "//sw/host/hsmtool",
-            "//sw/host/opentitantool",
+            "@opentitan_devbundle//:fake_keys/app_prod_spx.pem",
+            "@opentitan_devbundle//:opentitantool/opentitantool",
             "@softhsm2//:gen_dir",
         ],
         env = {
+            "OPENTITANTOOL": "$(rootpath @opentitan_devbundle//:opentitantool/opentitantool)",
             "SOFTHSM2_CONF": "$(rootpath //signing/softhsm:conf)",
             "FIRST": "opentitantool",
             "OTTOOL_ARGS": """
@@ -153,7 +156,7 @@ _SPX_TESTS = {
                 spx sign {rev_flag}
                     --domain={domain}
                     $(rootpath :tqbf_digest)
-                    sw/device/silicon_creator/lib/ownership/keys/fake/app_prod_spx.pem
+                    $(rootpath @opentitan_devbundle//:fake_keys/app_prod_spx.pem)
                     --output=tqbf.spx_sig
             """.format(
                 domain = param["domain"],
@@ -186,21 +189,22 @@ _SPX_TESTS = {
         srcs = ["ot_hsm_runner.sh"],
         data = [
             ":tqbf_digest",
+            "//hsmtool",
             "//signing/softhsm",
             "//signing/softhsm:conf",
-            "//sw/device/silicon_creator/lib/ownership/keys/fake:spx_keyset",
-            "//sw/host/hsmtool",
-            "//sw/host/opentitantool",
+            "@opentitan_devbundle//:fake_keys/app_prod_spx.pem",
+            "@opentitan_devbundle//:opentitantool/opentitantool",
             "@softhsm2//:gen_dir",
         ],
         env = {
+            "OPENTITANTOOL": "$(rootpath @opentitan_devbundle//:opentitantool/opentitantool)",
             "SOFTHSM2_CONF": "$(rootpath //signing/softhsm:conf)",
             "FIRST": "hsmtool",
             "OTTOOL_ARGS": """
                 --rcfile=
                 spx verify {rev_flag}
                     --domain={domain}
-                    sw/device/silicon_creator/lib/ownership/keys/fake/app_prod_spx.pem
+                    $(rootpath @opentitan_devbundle//:fake_keys/app_prod_spx.pem)
                     $(rootpath :tqbf_digest)
                     tqbf.spx_sig
             """.format(
@@ -246,20 +250,21 @@ sh_test(
     srcs = ["ot_hsm_runner.sh"],
     data = [
         ":image_bin",
+        "//hsmtool",
         "//signing/softhsm",
         "//signing/softhsm:conf",
-        "//sw/device/silicon_creator/lib/ownership/keys/fake:ecdsa_keyset",
-        "//sw/host/hsmtool",
-        "//sw/host/opentitantool",
+        "@opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.der",
+        "@opentitan_devbundle//:opentitantool/opentitantool",
         "@softhsm2//:gen_dir",
     ],
     env = {
+        "OPENTITANTOOL": "$(rootpath @opentitan_devbundle//:opentitantool/opentitantool)",
         "SOFTHSM2_CONF": "$(rootpath //signing/softhsm:conf)",
         "FIRST": "opentitantool",
         "OTTOOL_ARGS": """
             --rcfile=
             image manifest update
-                --ecdsa-key=sw/device/silicon_creator/lib/ownership/keys/fake/app_prod_ecdsa_p256.der
+                --ecdsa-key=$(rootpath @opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.der)
                 --output=image.signed_bin
                 $(rootpath :image_bin)
         """,
@@ -283,19 +288,20 @@ sh_test(
     srcs = ["ot_hsm_runner.sh"],
     data = [
         ":image_bin",
+        "//hsmtool",
         "//signing/softhsm",
         "//signing/softhsm:conf",
-        "//sw/device/silicon_creator/lib/ownership/keys/fake:app_prod_ecdsa_pub",
-        "//sw/host/hsmtool",
-        "//sw/host/opentitantool",
+        "@opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.der",
+        "@opentitan_devbundle//:opentitantool/opentitantool",
         "@softhsm2//:gen_dir",
     ],
     env = {
+        "OPENTITANTOOL": "$(rootpath @opentitan_devbundle//:opentitantool/opentitantool)",
         "SOFTHSM2_CONF": "$(rootpath //signing/softhsm:conf)",
         "FIRST": "hsmtool",
         "PREPARE_CMD": """
-            sw/host/opentitantool/opentitantool image manifest update
-                --ecdsa-key=sw/device/silicon_creator/lib/ownership/keys/fake/app_prod_ecdsa_p256.pub.der
+            $(rootpath @opentitan_devbundle//:opentitantool/opentitantool) image manifest update
+                --ecdsa-key=$(rootpath @opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.der)
                 --output=image.signed_bin
                 $(rootpath :image_bin)
         """,

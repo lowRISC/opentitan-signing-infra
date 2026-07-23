@@ -56,17 +56,17 @@ rust_library(
         "variants.rs",
     ],
     proc_macro_deps = [
-        "@crate_index//:paste",
+        "@rust_opentitan_signing_crates//:paste",
     ],
     deps = [
         ":bindgen_sha2_128s_simple",
         ":bindgen_shake_128s_simple",
-        "@crate_index//:asn1",
-        "@crate_index//:pem-rfc7468",
-        "@crate_index//:serde",
-        "@crate_index//:strum",
-        "@crate_index//:thiserror",
-        "@crate_index//:zeroize",
+        "@rust_opentitan_signing_crates//:asn1",
+        "@rust_opentitan_signing_crates//:pem-rfc7468",
+        "@rust_opentitan_signing_crates//:serde",
+        "@rust_opentitan_signing_crates//:strum",
+        "@rust_opentitan_signing_crates//:thiserror",
+        "@rust_opentitan_signing_crates//:zeroize",
     ],
 )
 
