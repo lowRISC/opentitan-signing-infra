@@ -1,0 +1,23 @@
+*~
+*.bak
+*.swp
+*.swo
+tags
+/.vscode
+
+# Build directories
+build/
+build*/
+
+# Rust Cargo build system files.
+target
+rust-project.json
+
+# Bazel-related cache and output directories
+bazel-*
+
+# Site-specific bazel configuration
+.bazelrc-site
+
+# Local binaries that should not be committed to the codebase
+.bin/
