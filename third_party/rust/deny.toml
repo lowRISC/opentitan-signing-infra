@@ -11,9 +11,8 @@ unmaintained = "workspace"
 
 [bans]
 skip = [
-    { crate = "core-foundation", reason = "multiple versions" },
-    { crate = "getrandom", reason = "multiple versions" },
     { crate = "syn", reason = "multiple versions" },
+    { crate = "windows-sys", reason = "multiple versions" },
 ]
 
 [licenses]
@@ -26,6 +25,7 @@ allow = [
     "MIT",
     "MPL-2.0",
     "Unicode-3.0",
+    "CDLA-Permissive-2.0",
 ]
 
 [sources]
