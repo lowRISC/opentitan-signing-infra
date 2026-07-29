@@ -22,6 +22,7 @@ rust_bindgen_library(
         "--allowlist-type=acorn_.*",
     ],
     cc_lib = ":acorn_hdr",
+    edition = "2024",
     header = "acorn.h",
     rustc_flags = [
         "--allow=non_snake_case",

@@ -173,6 +173,7 @@ rust_library(
         ":object_class",
     ],
     crate_name = "hsmtool",
+    edition = "2024",
     rustc_env = {
         "ATTRIBUTE_TYPE": "$(location :attribute_type)",
         "CERTIFICATE_TYPE": "$(location :certificate_type)",
@@ -225,6 +226,7 @@ rust_library(
 rust_binary(
     name = "hsmtool",
     srcs = ["src/hsmtool.rs"],
+    edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
         ":hsmlib",
@@ -242,6 +244,7 @@ rust_test(
     data = glob([
         "testdata/**",
     ]),
+    edition = "2024",
     env = {
         "TESTDATA": "$(rootpath testdata/key/test1_pkcs1.der)",
     },
