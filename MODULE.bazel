@@ -12,7 +12,13 @@ bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.4")
 bazel_dep(name = "rules_rust_bindgen", version = "0.59.2")
 bazel_dep(name = "rules_rust", version = "0.59.2")
-bazel_dep(name = "toolchains_llvm", version = "1.1.2", dev_dependency = True)
+
+# Development dependencies
+bazel_dep(
+    name = "toolchains_llvm",
+    version = "1.5.0",
+    dev_dependency = True,
+)
 
 # Rust Toolchain
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
@@ -40,13 +46,16 @@ register_toolchains("@rust_toolchains//:all")
 
 # Pinned LLVM & Rust Bindgen toolchain for local development, to avoid compiling LLVM from source
 # (see comment in `third_party/rust/BUILD.bazel` for more information).
+# TODO: The upstream prebuilt LLVM toolchain still dynamically links against and thus depends on
+# the system's `libxml2` & sysroot. We could consider switching to a more hermetic LLVM toolchain.
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
-llvm.toolchain(
-    name = "llvm_toolchain",
-    llvm_versions = {"": "10.0.0"},
-    sha256 = {"": "b25f592a0c00686f03e3b7db68ca6dc87418f681f4ead4df4745a01d9be63843"},
+llvm.toolchain(llvm_version = "17.0.6")
+use_repo(llvm, "llvm_toolchain", "llvm_toolchain_llvm")
+
+register_toolchains(
+    "@llvm_toolchain//:all",
+    dev_dependency = True,
 )
-use_repo(llvm, "llvm_toolchain_llvm")
 
 register_toolchains(
     "//third_party/rust:bindgen_toolchain",
