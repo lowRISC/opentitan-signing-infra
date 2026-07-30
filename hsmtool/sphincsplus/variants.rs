@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::SpxError;
-use paste::paste;
+use pastey::paste;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 

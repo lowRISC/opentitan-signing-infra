@@ -51,7 +51,7 @@ jobs:
       - name: Check Rust dependencies
         if: success() || failure()
         uses: EmbarkStudios/cargo-deny-action@v2
-        # FIXME: Resolve existing errors with `ml-dsa` and `paste` and remove this line
+        # FIXME: Resolve existing errors with `ml-dsa` and remove this line
         continue-on-error: true
         with:
           manifest-path: ./third_party/rust/Cargo.toml
