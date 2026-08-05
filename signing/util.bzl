@@ -4,6 +4,7 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
+PreSigningBinaryInfo = provider(fields = ["files"])
 SigningToolInfo = provider(fields = ["tool", "data", "env", "location"])
 KeySetInfo = provider(fields = ["keys", "config", "selected_key", "profile", "sign", "tool"])
 
