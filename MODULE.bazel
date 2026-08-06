@@ -173,3 +173,10 @@ use_repo(hsm, "softhsm2")
 # Patched sphincsplus libraries to include appropriate SLH-DSA / SPHINCS+ support
 sphincsplus = use_extension("//third_party/sphincsplus:extensions.bzl", "sphincsplus")
 use_repo(sphincsplus, "sphincsplus_fips205_ipd")
+
+# For local development, use opentitantool from the devbundle. Downstream users should
+# define their own opentitantool_toolchain.
+register_toolchains(
+    "@opentitan_signing_infra//toolchains/opentitantool:bundled_opentitantool_toolchain",
+    dev_dependency = True,
+)
