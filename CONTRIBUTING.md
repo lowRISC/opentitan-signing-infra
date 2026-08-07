@@ -1,3 +1,7 @@
+[//]: # (Copyright lowRISC contributors \(OpenTitan project\).)
+[//]: # (Licensed under the Apache License, Version 2.0, see LICENSE for details.)
+[//]: # (SPDX-License-Identifier: Apache-2.0)
+
 # Contributing code to the `opentitan-signing-infra` repository
 
 This repository was split off from the [OpenTitan project](https://github.com/lowRISC/opentitan/), where it originally resided.

@@ -1,3 +1,7 @@
+[//]: # (Copyright lowRISC contributors \(OpenTitan project\).)
+[//]: # (Licensed under the Apache License, Version 2.0, see LICENSE for details.)
+[//]: # (SPDX-License-Identifier: Apache-2.0)
+
 # OpenTitan Hardware Security Module Tool
 
 *[Click here for the generated documentation of `hsmtool`.](https://opentitan.org/gen/rustdoc/hsmtool)*

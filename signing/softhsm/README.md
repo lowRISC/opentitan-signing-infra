@@ -1,3 +1,7 @@
+[//]: # (Copyright lowRISC contributors \(OpenTitan project\).)
+[//]: # (Licensed under the Apache License, Version 2.0, see LICENSE for details.)
+[//]: # (SPDX-License-Identifier: Apache-2.0)
+
 # SoftHSM2 Configuration
 
 This is a basic SoftHSM2 configuration for testing signing flows with fake keys.
