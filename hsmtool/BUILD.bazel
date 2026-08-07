@@ -27,10 +27,11 @@ genrule(
     srcs = [":binding_srcs"],
     outs = ["object_class.rs"],
     cmd = """
-        $(execpath :pkcs11_consts) \
+        $(PYTHON3) $(execpath :pkcs11_consts) \
             --binding $(locations :binding_srcs) \
             --serde --strum --conv_data CKO cryptoki::object::ObjectClass > $@
     """,
+    toolchains = ["@rules_python//python:current_py_toolchain"],
     tools = [
         ":pkcs11_consts",
     ],
@@ -41,10 +42,11 @@ genrule(
     srcs = [":binding_srcs"],
     outs = ["key_type.rs"],
     cmd = """
-        $(execpath :pkcs11_consts) \
+        $(PYTHON3) $(execpath :pkcs11_consts) \
             --binding $(locations :binding_srcs) \
             --serde --strum --conv_data CKK cryptoki::object::KeyType > $@
     """,
+    toolchains = ["@rules_python//python:current_py_toolchain"],
     tools = [
         ":pkcs11_consts",
     ],
@@ -55,10 +57,11 @@ genrule(
     srcs = [":binding_srcs"],
     outs = ["certificate_type.rs"],
     cmd = """
-        $(execpath :pkcs11_consts) \
+        $(PYTHON3) $(execpath :pkcs11_consts) \
             --binding $(locations :binding_srcs) \
             --serde --strum --conv_data CKC cryptoki::object::CertificateType > $@
     """,
+    toolchains = ["@rules_python//python:current_py_toolchain"],
     tools = [
         ":pkcs11_consts",
     ],
@@ -69,10 +72,11 @@ genrule(
     srcs = [":binding_srcs"],
     outs = ["mechanism_type.rs"],
     cmd = """
-        $(execpath :pkcs11_consts) \
+        $(PYTHON3) $(execpath :pkcs11_consts) \
             --binding $(locations :binding_srcs) \
             --serde --strum --conv_data CKM cryptoki::mechanism::MechanismType > $@
     """,
+    toolchains = ["@rules_python//python:current_py_toolchain"],
     tools = [
         ":pkcs11_consts",
     ],
@@ -83,10 +87,11 @@ genrule(
     srcs = [":binding_srcs"],
     outs = ["attribute_type.rs"],
     cmd = """
-        $(execpath :pkcs11_consts) \
+        $(PYTHON3) $(execpath :pkcs11_consts) \
             --binding $(locations :binding_srcs) \
             --serde --strum CKA cryptoki::object::AttributeType > $@
     """,
+    toolchains = ["@rules_python//python:current_py_toolchain"],
     tools = [
         ":pkcs11_consts",
     ],
