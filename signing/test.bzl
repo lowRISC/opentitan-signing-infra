@@ -22,10 +22,10 @@ def _signature_test_impl(ctx):
     if ctx.attr.spx_domain != "":
         verify_args = "--spx --domain " + ctx.attr.spx_domain
     if ecdsa_key:
-        selected_ecdsa_key_path = ecdsa_key.file.path
+        selected_ecdsa_key_path = ecdsa_key.file.short_path
         keys.append(ecdsa_key.file)
     if spx_key:
-        selected_spx_key_path = spx_key.file.path
+        selected_spx_key_path = spx_key.file.short_path
         keys.append(spx_key.file)
 
     files = [f.short_path for f in ctx.files.srcs]
