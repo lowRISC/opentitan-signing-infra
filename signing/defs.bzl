@@ -7,6 +7,7 @@ load(
     "//signing:offline.bzl",
     _offline_fake_ecdsa_sign = "offline_fake_ecdsa_sign",
     _offline_fake_rsa_sign = "offline_fake_rsa_sign",
+    _offline_fake_spx_sign = "offline_fake_spx_sign",
     _offline_presigning_artifacts = "offline_presigning_artifacts",
     _offline_signature_attach = "offline_signature_attach",
 )
@@ -41,6 +42,7 @@ sign_binary = _sign_binary
 offline_presigning_artifacts = _offline_presigning_artifacts
 offline_fake_ecdsa_sign = _offline_fake_ecdsa_sign
 offline_fake_rsa_sign = _offline_fake_rsa_sign
+offline_fake_spx_sign = _offline_fake_spx_sign
 offline_signature_attach = _offline_signature_attach
 
 #Re-export rules for testing signing operations

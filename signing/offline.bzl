@@ -143,6 +143,42 @@ offline_fake_ecdsa_sign = rule(
     doc = "Create detached signatures using on-disk private keys via opentitantool.",
 )
 
+def _offline_fake_spx_sign(ctx):
+    opentitantool = ctx.toolchains[OPENTITANTOOL_TOOLCHAIN].tools.executable
+    outputs = []
+    spx_key = key_from_dict(ctx.attr.spx_key, "spx_key")
+    spx_domain = spx_key.config.get("domain", "Pure")
+    expected_input_ext = ".digest" if spx_domain.lower() == "prehashedsha256" else ".spx-message"
+    tool, _, _ = signing_tool_info(ctx, ctx.attr.spx_key, opentitantool)
+    files = {}
+    for file in ctx.files.srcs:
+        # Skip the presigning script.
+        if file.basename.endswith(".json"):
+            continue
+        if file.basename.endswith(expected_input_ext):
+            spx_sig = local_spx_sign(ctx, tool, file, spx_key)
+            outputs.append(spx_sig)
+    if not outputs:
+        fail("No SPHINCS+ messages found for SPX signing")
+
+    return [DefaultInfo(files = depset(outputs), data_runfiles = ctx.runfiles(files = outputs))]
+
+offline_fake_spx_sign = rule(
+    implementation = _offline_fake_spx_sign,
+    attrs = {
+        "srcs": attr.label_list(allow_files = True, doc = "Digest files to sign"),
+        "spx_key": attr.label_keyed_string_dict(
+            allow_files = True,
+            mandatory = True,
+            doc = "SPHINCS+ private key to sign this image",
+        ),
+    },
+    toolchains = [
+        OPENTITANTOOL_TOOLCHAIN,
+    ],
+    doc = "Create detached signatures using on-disk private keys via opentitantool.",
+)
+
 def _offline_signature_attach(ctx):
     if ctx.files.rsa_signatures and ctx.files.ecdsa_signatures:
         fail("Only one of RSA or ECDSA signatures should be provided")

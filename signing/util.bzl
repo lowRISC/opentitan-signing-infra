@@ -117,6 +117,40 @@ def key_ext(ecdsa, rsa, spx):
     else:
         return ".{}".format(name)
 
+def local_spx_sign(ctx, tool, spx_msg, spx_key):
+    """Sign a digest with a local on-disk SPX private key.
+
+    Args:
+        ctx: The rule context.
+        tool: SigningToolInfo; A provider referring to the opentitantool binary.
+        spx_msg: file; The SPHINCS+ message to be signed.
+        spx_key: struct; The SPHINCS+ private key.
+    Returns:
+        file: The SPX signature file.
+    """
+    private_key = spx_key.file
+    spx_sig = ctx.actions.declare_file(paths.replace_extension(spx_msg.basename, ".spx_sig"))
+    domain = spx_key.config.get("domain", "Pure")
+    rev = spx_key.config.get("byte-reversal-bug", "false")
+    ctx.actions.run(
+        outputs = [spx_sig],
+        inputs = [spx_msg, private_key],
+        arguments = [
+            "--rcfile=",
+            "--quiet",
+            "spx",
+            "sign",
+            "--spx-hash-reversal-bug={}".format(rev),
+            "--domain={}".format(domain),
+            "--output={}".format(spx_sig.path),
+            spx_msg.path,
+            private_key.path,
+        ],
+        executable = tool.tool,
+        mnemonic = "LocalSpxSign",
+    )
+    return spx_sig
+
 def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = None, profile = None):
     """Sign a digest with a local on-disk RSA private key.
 
@@ -167,27 +201,7 @@ def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = N
 
     spx_sig = None
     if spxmsg and spx_key:
-        private_key = spx_key.file
-        spx_sig = ctx.actions.declare_file(paths.replace_extension(spxmsg.basename, ".spx_sig"))
-        domain = spx_key.config.get("domain", "Pure")
-        rev = spx_key.config.get("byte-reversal-bug", "false")
-        ctx.actions.run(
-            outputs = [spx_sig],
-            inputs = [spxmsg, private_key],
-            arguments = [
-                "--rcfile=",
-                "--quiet",
-                "spx",
-                "sign",
-                "--spx-hash-reversal-bug={}".format(rev),
-                "--domain={}".format(domain),
-                "--output={}".format(spx_sig.path),
-                spxmsg.path,
-                private_key.path,
-            ],
-            executable = tool.tool,
-            mnemonic = "LocalSpxSign",
-        )
+        spx_sig = local_spx_sign(ctx, tool, spxmsg, spx_key)
 
     if rsa_key:
         return None, output_sig, spx_sig
