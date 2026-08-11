@@ -2,6 +2,9 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Rules, providers & macros for signing artifacts for OpenTitan platforms.
+"""
+
 load("//signing:keyset.bzl", _keyset = "keyset")
 load(
     "//signing:offline.bzl",

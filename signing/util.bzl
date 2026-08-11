@@ -2,6 +2,9 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Common macros & provider utilities for implementing signing rules.
+"""
+
 load("@bazel_skylib//lib:paths.bzl", "paths")
 
 PreSigningBinaryInfo = provider(fields = ["files"])
@@ -32,7 +35,8 @@ def key_from_dict(key, attr_name):
         key: dict; A signing key and nickname or a keyset and key nickname.
         attr_name: The attribute name (used for error reporting).
     Returns:
-        A struct with the key label, the key file and key nickname.
+        A struct with the key label, file, nickname and any associated
+        key information or configuration.
     """
     if not key:
         return None
@@ -101,7 +105,7 @@ def key_ext(ecdsa, rsa, spx):
     Args:
         ecdsa: struct; The ECDSA key.
         rsa: struct; The RSA key.
-        spx: struct; The SPX+ key.
+        spx: struct; The SPHINCS+ key.
     Returns:
         str: The key extension.
     """
@@ -118,7 +122,7 @@ def key_ext(ecdsa, rsa, spx):
         return ".{}".format(name)
 
 def local_spx_sign(ctx, tool, spx_msg, spx_key):
-    """Sign a digest with a local on-disk SPX private key.
+    """Sign a digest with a local on-disk SPHINCS+ private key.
 
     Args:
         ctx: The rule context.
@@ -126,7 +130,7 @@ def local_spx_sign(ctx, tool, spx_msg, spx_key):
         spx_msg: file; The SPHINCS+ message to be signed.
         spx_key: struct; The SPHINCS+ private key.
     Returns:
-        file: The SPX signature file.
+        file: The SPHINCS+ signature file.
     """
     private_key = spx_key.file
     spx_sig = ctx.actions.declare_file(paths.replace_extension(spx_msg.basename, ".spx_sig"))
@@ -152,7 +156,11 @@ def local_spx_sign(ctx, tool, spx_msg, spx_key):
     return spx_sig
 
 def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = None, profile = None):
-    """Sign a digest with a local on-disk RSA private key.
+    """Sign a digest with local on-disk private keys.
+
+    Either ECDSA or RSA private keys are used for signing (but not both).
+    A SPHINCS+ key and message can additionally be specified to create additional
+    SPHINCS+ signature files.
 
     Args:
         ctx: The rule context.
@@ -160,11 +168,11 @@ def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = N
         digest: file; The digest of the binary to be signed.
         ecdsa_key: struct; The ECDSA private key.
         rsa_key: struct; The RSA private key.
-        spxmsg: file; The SPX+ message to be signed.
-        spx_key: struct; The SPX+ private key.
-        profile: str; The token profile.  Not used by this function.
+        spxmsg: file; The SPHINCS+ message to be signed.
+        spx_key: struct; The SPHINCS+ private key.
+        profile: str; The token profile. Intentionally unused by this function.
     Returns:
-        file, file, file: The ECDSA, RSA and SPX signature files.
+        file, file, file: The ECDSA, RSA and SPHINCS+ signature files.
     """
     if rsa_key and ecdsa_key:
         fail("Only one of ECDSA or RSA key should be provided")
@@ -213,17 +221,21 @@ def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = N
 def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = None, profile = None):
     """Sign a digest with a token-provided private key.
 
+    Either ECDSA or RSA private keys are used for signing (but not both).
+    A SPHINCS+ key and message can additionally be specified to create additional
+    SPHINCS+ signature files. An HSMtool profile must be provided.
+
     Args:
         ctx: The rule context.
         tool: file; A SigningToolInfo provider referring to the hsmtool binary.
         digest: file; The digest of the binary to be signed.
         ecdsa_key: struct; The ECDSA private key.
         rsa_key: struct; The RSA private key.
-        spxmsg: file; The SPX+ message to be signed.
-        spx_key: struct; The SPX+ private key.
+        spxmsg: file; The SPHINCS+ message to be signed.
+        spx_key: struct; The SPHINCS+ private key.
         profile: str; The hsmtool profile.
     Returns:
-        file, file, file: The RSA and SPX signature files.
+        file, file, file: The RSA and SPHINCS+ signature files.
     """
     if not profile:
         fail("Missing the `hsmtool` profile")

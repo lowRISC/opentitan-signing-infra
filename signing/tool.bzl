@@ -2,6 +2,9 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Rules for describing tools for performing signing operations.
+"""
+
 load("//signing:util.bzl", "SigningToolInfo")
 load("//toolchains:defs.bzl", "host_tool_transition")
 
@@ -38,4 +41,5 @@ signing_tool = rule(
             doc = "The location of private keys.  Local keys are on-disk and are typically used for simulation or emulation (FPGA) test scenarios.  Token keys are held in a secure token or HSM and are typically used for signing artifacts for real chips.",
         ),
     },
+    doc = "Create a signing tool, which encapsulates a tool (binary), environment, and private-key location.",
 )

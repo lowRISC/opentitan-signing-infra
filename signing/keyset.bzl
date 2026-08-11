@@ -2,6 +2,9 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Rules for describing sets of configured keys used in signing operations.
+"""
+
 load(
     "//signing:util.bzl",
     "KeySetInfo",
@@ -69,4 +72,5 @@ keyset = rule(
             providers = [SigningToolInfo],
         ),
     },
+    doc = "Create a keyset, which encapsulates a set of keys, their configuration, and the tool/profile associated with the keys.",
 )

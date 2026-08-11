@@ -2,6 +2,9 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Signing macros / rules for signing binaries.
+"""
+
 load("//signing:framing.bzl", "post_signing_attach", "presigning_artifacts")
 load("//signing:util.bzl", "get_override", "key_from_dict", "signing_tool_info")
 load("//toolchains/opentitantool:opentitantool.bzl", "OPENTITANTOOL_TOOLCHAIN")
@@ -36,7 +39,6 @@ def sign_binary(ctx, opentitantool, **kwargs):
         spx_key: The SPHINCS+ signing key.
         bin: The input binary.
         manifest: The manifest header.
-        _tool: The signing tool (opentitantool).
     Returns:
         A dict of all of the signing artifacts:
           pre: The pre-signing binary (input binary with manifest changes applied).
@@ -135,4 +137,5 @@ sign_bin = rule(
     toolchains = [
         OPENTITANTOOL_TOOLCHAIN,
     ],
+    doc = "Sign a binary with the specified keys.",
 )

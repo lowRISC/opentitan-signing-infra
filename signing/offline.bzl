@@ -2,6 +2,11 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Signing macros / rules for offline signing operations.
+
+This allows for signing in offline environments, disconnected from the rest of the Bazel build process.
+"""
+
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//signing:framing.bzl", "post_signing_attach", "presigning_artifacts")
 load(
@@ -75,6 +80,7 @@ offline_presigning_artifacts = rule(
     toolchains = [
         OPENTITANTOOL_TOOLCHAIN,
     ],
+    doc = "Create the pre-signing artifacts for a given input binary, for use in offline signing flows.",
 )
 
 def _offline_fake_rsa_sign(ctx):
@@ -107,7 +113,7 @@ offline_fake_rsa_sign = rule(
     toolchains = [
         OPENTITANTOOL_TOOLCHAIN,
     ],
-    doc = "Create detached signatures using on-disk private keys via opentitantool.",
+    doc = "Create detached RSA signatures using on-disk private keys via opentitantool.",
 )
 
 def _offline_fake_ecdsa_sign(ctx):
@@ -140,7 +146,7 @@ offline_fake_ecdsa_sign = rule(
     toolchains = [
         OPENTITANTOOL_TOOLCHAIN,
     ],
-    doc = "Create detached signatures using on-disk private keys via opentitantool.",
+    doc = "Create detached ECDSA signatures using on-disk private keys via opentitantool.",
 )
 
 def _offline_fake_spx_sign(ctx):
@@ -176,7 +182,7 @@ offline_fake_spx_sign = rule(
     toolchains = [
         OPENTITANTOOL_TOOLCHAIN,
     ],
-    doc = "Create detached signatures using on-disk private keys via opentitantool.",
+    doc = "Create detached SPHINCS+ signatures using on-disk private keys via opentitantool.",
 )
 
 def _offline_signature_attach(ctx):
@@ -240,4 +246,5 @@ offline_signature_attach = rule(
     toolchains = [
         OPENTITANTOOL_TOOLCHAIN,
     ],
+    doc = "Attach offline-generated signatures to unsigned (pre-processed) binary files",
 )
