@@ -2,7 +2,15 @@
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
 
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("//signing:keyset.bzl", "keyset")
+load(
+    "//signing:offline.bzl",
+    "offline_fake_ecdsa_sign",
+    "offline_fake_spx_sign",
+    "offline_presigning_artifacts",
+    "offline_signature_attach",
+)
 load("//signing:test.bzl", "signature_test")
 load("//signing:tool.bzl", "signing_tool")
 
@@ -11,6 +19,7 @@ package(default_visibility = ["//visibility:private"])
 # Artifacts for testing
 
 exports_files(glob([
+    "*.json",
     "*.signed.bin",
 ]))
 
@@ -25,6 +34,14 @@ filegroup(
     testonly = True,
     srcs = [
         "empty_test_slot_a_corrupted_fpga_cw310_rom_with_fake_keys.prod_key_0.signed.bin",
+    ],
+)
+
+filegroup(
+    name = "empty_unsigned_binary",
+    testonly = True,
+    srcs = [
+        "empty_test_slot_a_unsigned_fpga_cw310.bin",
     ],
 )
 
@@ -61,7 +78,7 @@ keyset(
     tool = ":local_opentitantool",
 )
 
-# Tests for signing rules
+# Tests for (online) signing rules
 
 signature_test(
     name = "verify_signature_test",
@@ -127,5 +144,144 @@ test_suite(
         ":wrong_domain_test",
         ":wrong_ecdsa_key_test",
         ":wrong_spx_key_test",
+    ],
+)
+
+# Tests for offline signing rules
+
+# Offline test variants - maps names to (ecdsa_key name, optional spx_key name, optional spx_key domain).
+OFFLINE_TEST_VARIANTS = {
+    # No SPHINCS+ key signing, only ECDSA.
+    "ecdsa_only": ("app_dev_0", None, None),
+    # SPHINCS+ key signing with the `PreHashedSha256` domain.
+    "spx_prehashed": ("app_dev_0", "app_dev_0", "PrehashedSha256"),
+    # Sphincs+ key signing with the `Pure` domain.
+    "spx_pure": ("app_prod_0", "app_prod_0", "Pure"),
+}
+
+# Local copies of the binary for offline signing tests to avoid name collision.
+[
+    copy_file(
+        name = "empty_unsigned_binary_for_{}".format(name),
+        testonly = True,
+        src = ":empty_unsigned_binary",
+        out = "empty_test_slot_a_unsigned_fpga_cw310_{}.bin".format(name),
+    )
+    for name in OFFLINE_TEST_VARIANTS.keys()
+]
+
+[
+    offline_presigning_artifacts(
+        name = "offline_presigning_artifacts_{}".format(name),
+        testonly = True,
+        srcs = [
+            ":empty_unsigned_binary_for_{}".format(name),
+        ],
+        ecdsa_key = {":fake_ecdsa_keyset": ecdsa_key},
+        manifest = ":manifest.json",
+        spx_key = {":fake_spx_keyset": spx_key} if spx_key else None,
+    )
+    for name, (ecdsa_key, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+]
+
+[
+    offline_fake_ecdsa_sign(
+        name = "offline_fake_ecdsa_signature_{}".format(name),
+        testonly = True,
+        srcs = [
+            ":offline_presigning_artifacts_{}".format(name),
+        ],
+        ecdsa_key = {":fake_ecdsa_keyset": ecdsa_key},
+    )
+    for name, (ecdsa_key, _, _) in OFFLINE_TEST_VARIANTS.items()
+]
+
+[
+    offline_fake_spx_sign(
+        name = "offline_fake_spx_signature_{}".format(name),
+        testonly = True,
+        srcs = [
+            ":offline_presigning_artifacts_{}".format(name),
+        ],
+        spx_key = {":fake_spx_keyset": spx_key},
+    )
+    for name, (_, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+    if spx_key
+]
+
+[
+    offline_signature_attach(
+        name = "offline_signed_{}".format(name),
+        testonly = True,
+        srcs = [
+            ":offline_presigning_artifacts_{}".format(name),
+        ],
+        ecdsa_signatures = [
+            ":offline_fake_ecdsa_signature_{}".format(name),
+        ],
+        spx_signatures = ([
+            ":offline_fake_spx_signature_{}".format(name),
+        ] if spx_key else []),
+    )
+    for name, (_, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+]
+
+[
+    signature_test(
+        name = "offline_signing_test_{}".format(name),
+        srcs = [
+            ":offline_signed_{}".format(name),
+        ],
+        ecdsa_key = {":fake_ecdsa_keyset": ecdsa_key},
+        spx_domain = spx_domain,
+        spx_key = {":fake_spx_keyset": spx_key} if spx_key else None,
+    )
+    for name, (ecdsa_key, spx_key, spx_domain) in OFFLINE_TEST_VARIANTS.items()
+]
+
+# SPHINCS+ signing uses a non-deterministic optrand, so we cannot expect the signed
+# binaries that are produced to look the same.
+#
+# OpenTitanTool currently uses deterministic ECDSA signing (RFC6979), so we can compare
+# to a checked-in binary for ECDSA-only signing. If OpenTitanTool is modified to use
+# RNG in ECDSA signing, this test (and the related binary) should be dropped.
+[
+    sh_test(
+        name = "offline_signing_compare_test_{}".format(name),
+        srcs = [
+            "check_diff.sh",
+        ],
+        args = [
+            "$(location :offline_signed_{})".format(name),
+            "$(location :empty_test_slot_a_fpga_cw310_{}.signed.bin)".format(name),
+        ],
+        data = [
+            ":empty_test_slot_a_fpga_cw310_{}.signed.bin".format(name),
+            ":offline_signed_{}".format(name),
+        ],
+    )
+    for name, (ecdsa_key, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+    if spx_key == None and ecdsa_key != None
+]
+
+test_suite(
+    name = "offline_signing_tests",
+    tags = ["manual"],
+    tests = [
+        ":offline_signing_test_{}".format(name)
+        for name in OFFLINE_TEST_VARIANTS.keys()
+    ] + [
+        ":offline_signing_compare_test_{}".format(name)
+        for name, (ecdsa_key, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+        if spx_key == None and ecdsa_key != None
+    ],
+)
+
+test_suite(
+    name = "signing_rule_tests",
+    tags = ["manual"],
+    tests = [
+        ":offline_signing_tests",
+        ":signature_tests",
     ],
 )

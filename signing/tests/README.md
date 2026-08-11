@@ -38,16 +38,38 @@ These steps still worked as of commit [`0135da5e167491a7709d972789278acd2f4cec4e
    bazelisk build //sw/device/silicon_creator/rom/e2e:empty_test_slot_a_corrupted_fpga_cw310_rom_with_fake_keys.prod_key_0.signed.bin
    ```
 
-7. Copy across and replace the existing corrupted binary:
+8. Copy across and replace the existing corrupted binary:
    ```sh
    cp -fv bazel-bin/sw/device/silicon_creator/rom/e2e/empty_test_slot_a_corrupted_fpga_cw310_rom_with_fake_keys.prod_key_0.signed.bin $SIGNING_REPO_PATH/signing/tests
    ```
 
-8.  Verify that everything still works by running
+8. Build a Bazel target with the unsigned empty test binary:
+   ```sh
+   bazelisk build //sw/device/silicon_creator/rom/e2e:empty_test_slot_a_unsigned
+   ```
+
+9.  Copy across and replace the existing unsigned test binary:
+   ```
+   cp -fv bazel-bin/sw/device/silicon_creator/rom/e2e/empty_test_slot_a_unsigned_fpga_cw310.bin $SIGNING_REPO_PATH/signing/tests
+   ```
+
+10.  Build a Bazel target for the ROM_EXT manifest:
+   ```sh
+   bazelisk build //sw/device/silicon_creator/rom_ext:manifest
+   ```
+
+11. Copy across and replace the existing manifest.JSON:
+   ```sh
+   cp -fv bazel-bin/sw/device/silicon_creator/rom_ext/manifest.json $SIGNING_REPO_PATH/signing/tests
+   ```
+
+12. Verify that everything still works by running
    ```sh
    bazelisk test //signing/tests/...
    ```
    If it doesn't, either re-follow the process or fix the breakage in these tests targets.
+   If the `offline_signing_test_{}` tests are failing, you need to update the 'snapshot' signed binary targets, provided nothing else has changed.
+   You can do this by building the relevant `offline_signed_{}` targets and using them to replace the `empty_test_slot_a_fpga_cw310_{}.signed.bin` binaries.
 
 **TODO: consider converting to a script to generate these artifacts automatically.**
 
