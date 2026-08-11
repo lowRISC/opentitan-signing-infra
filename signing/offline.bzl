@@ -4,7 +4,15 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//signing:framing.bzl", "post_signing_attach", "presigning_artifacts")
-load("//signing:util.bzl", "KeySetInfo", "PreSigningBinaryInfo", "key_from_dict", "local_sign", "signing_tool_info")
+load(
+    "//signing:util.bzl",
+    "KeySetInfo",
+    "PreSigningBinaryInfo",
+    "key_from_dict",
+    "local_sign",
+    "local_spx_sign",
+    "signing_tool_info",
+)
 load("//toolchains/opentitantool:opentitantool.bzl", "OPENTITANTOOL_TOOLCHAIN")
 
 def _offline_presigning_artifacts(ctx):
@@ -78,6 +86,10 @@ def _offline_fake_rsa_sign(ctx):
         # Skip the presigning script.
         if file.basename.endswith(".json"):
             continue
+
+        # Skip any SPHINCS+ messages if we're using the `Pure` domain instead of the `PreHashedSha256` domain
+        if file.basename.endswith(".spx-message"):
+            continue
         _, sig, _ = local_sign(ctx, tool, file, None, rsa_key)
         outputs.append(sig)
     return [DefaultInfo(files = depset(outputs), data_runfiles = ctx.runfiles(files = outputs))]
@@ -106,6 +118,10 @@ def _offline_fake_ecdsa_sign(ctx):
     for file in ctx.files.srcs:
         # Skip the presigning script.
         if file.basename.endswith(".json"):
+            continue
+
+        # Skip any SPHINCS+ messages if we're using the `Pure` domain instead of the `PreHashedSha256` domain
+        if file.basename.endswith(".spx-message"):
             continue
         sig, _, _ = local_sign(ctx, tool, file, ecdsa_key, None)
         outputs.append(sig)
