@@ -1,0 +1,131 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+load("//signing:keyset.bzl", "keyset")
+load("//signing:test.bzl", "signature_test")
+load("//signing:tool.bzl", "signing_tool")
+
+package(default_visibility = ["//visibility:private"])
+
+# Artifacts for testing
+
+exports_files(glob([
+    "*.signed.bin",
+]))
+
+filegroup(
+    name = "signed_rom_ext_binaries",
+    testonly = True,
+    srcs = glob(["rom_ext_dice_x509_slot_a*.app_prod_0.app_prod_0.signed.bin"]),
+)
+
+filegroup(
+    name = "corrupted_signed_binary",
+    testonly = True,
+    srcs = [
+        "empty_test_slot_a_corrupted_fpga_cw310_rom_with_fake_keys.prod_key_0.signed.bin",
+    ],
+)
+
+signing_tool(
+    name = "local_opentitantool",
+    testonly = True,
+    location = "local",
+    tool = "@opentitan_devbundle//:opentitantool/opentitantool",
+)
+
+keyset(
+    name = "fake_ecdsa_keyset",
+    testonly = True,
+    build_setting_default = "",
+    keys = {
+        "@opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.der": "app_prod_0",
+        "@opentitan_devbundle//:fake_keys/app_dev_ecdsa_p256.der": "app_dev_0",
+        "@opentitan_devbundle//:fake_keys/app_test_ecdsa_p256.der": "app_test_0",
+        "@opentitan_devbundle//:fake_keys/app_unauthorized_ecdsa_p256.der": "app_unauthorized_0",
+    },
+    profile = "local",
+    tool = ":local_opentitantool",
+)
+
+keyset(
+    name = "fake_spx_keyset",
+    testonly = True,
+    build_setting_default = "",
+    keys = {
+        "@opentitan_devbundle//:fake_keys/app_prod_spx.pem": "app_prod_0",
+        "@opentitan_devbundle//:fake_keys/app_dev_spx.pem": "app_dev_0:domain=PreHashedSha256",
+    },
+    profile = "local",
+    tool = ":local_opentitantool",
+)
+
+# Tests for signing rules
+
+signature_test(
+    name = "verify_signature_test",
+    srcs = [
+        ":signed_rom_ext_binaries",
+    ],
+)
+
+signature_test(
+    name = "valid_signature_test",
+    srcs = [
+        ":signed_rom_ext_binaries",
+    ],
+    ecdsa_key = {":fake_ecdsa_keyset": "app_prod_0"},
+    spx_domain = "Pure",
+    spx_key = {":fake_spx_keyset": "app_prod_0"},
+)
+
+signature_test(
+    name = "corrupt_signature_test",
+    srcs = [
+        ":corrupted_signed_binary",
+    ],
+    negative_test = True,
+)
+
+signature_test(
+    name = "wrong_ecdsa_key_test",
+    srcs = [
+        ":signed_rom_ext_binaries",
+    ],
+    ecdsa_key = {":fake_ecdsa_keyset": "app_dev_0"},
+    negative_test = True,
+)
+
+signature_test(
+    name = "wrong_spx_key_test",
+    srcs = [
+        ":signed_rom_ext_binaries",
+    ],
+    negative_test = True,
+    spx_key = {":fake_spx_keyset": "app_dev_0"},
+)
+
+signature_test(
+    name = "wrong_domain_test",
+    srcs = [
+        ":signed_rom_ext_binaries",
+    ],
+    ecdsa_key = {":fake_ecdsa_keyset": "app_prod_0"},
+    negative_test = True,
+    spx_domain = "PrehashedSha256",
+    spx_key = {":fake_spx_keyset": "app_prod_0"},
+)
+
+test_suite(
+    name = "signature_tests",
+    tags = ["manual"],
+    tests = [
+        ":corrupt_signature_test",
+        ":valid_signature_test",
+        ":verify_signature_test",
+        ":wrong_domain_test",
+        ":wrong_ecdsa_key_test",
+        ":wrong_spx_key_test",
+    ],
+)
