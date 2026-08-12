@@ -84,7 +84,7 @@ fn main() -> Result<()> {
 
     // Initialize the HSM module interface.
     let mut hsm = Module::initialize(&args.module).context(
-        "Loading the PKCS11 module usually depends on several environent variables.  Check HSMTOOL_MODULE, SOFTHSM2_CONF or your HSM's documentation.")?;
+        "Loading the PKCS11 module usually depends on several environment variables.  Check HSMTOOL_MODULE, SOFTHSM2_CONF or your HSM's documentation.")?;
 
     // Initialize the list of all valid attribute types early.  Disable logging
     // so we don't have to see all the harmless conversion errors for the types
