@@ -108,3 +108,27 @@ jobs:
 
       - name: Run signing rule tests
         run: bazelisk test --test_output=all --build_tests_only //signing/...
+
+  integration:
+    name: Integration test
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: example/
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: false
+          disk-cache: false
+          repository-cache: false
+
+      - name: Check for uncommitted Bazel lockfile changes
+        run: |
+          bazelisk mod deps --lockfile_mode=update
+          git diff --exit-code MODULE.bazel.lock
+
+      - name: Run integration tests
+        run: bazelisk test --test_output=all --build_tests_only //...
