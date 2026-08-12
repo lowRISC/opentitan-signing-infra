@@ -8,6 +8,8 @@ tags
 # Build directories
 build/
 build*/
+example/build/
+example/build*/
 
 # Rust Cargo build system files.
 target
@@ -15,6 +17,7 @@ rust-project.json
 
 # Bazel-related cache and output directories
 bazel-*
+example/bazel-*
 
 # Site-specific bazel configuration
 .bazelrc-site

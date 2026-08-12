@@ -43,6 +43,16 @@ filegroup(
     srcs = [
         "empty_test_slot_a_unsigned_fpga_cw310.bin",
     ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "test_manifest",
+    testonly = True,
+    srcs = [
+        ":manifest.json",
+    ],
+    visibility = ["//visibility:public"],
 )
 
 signing_tool(
@@ -178,7 +188,7 @@ OFFLINE_TEST_VARIANTS = {
             ":empty_unsigned_binary_for_{}".format(name),
         ],
         ecdsa_key = {":fake_ecdsa_keyset": ecdsa_key},
-        manifest = ":manifest.json",
+        manifest = ":test_manifest",
         spx_key = {":fake_spx_keyset": spx_key} if spx_key else None,
     )
     for name, (ecdsa_key, spx_key, _) in OFFLINE_TEST_VARIANTS.items()

@@ -1,0 +1,99 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+load("@opentitan_signing_infra//signing:defs.bzl", "keyset", "sign_bin", "signature_test", "signing_tool")
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+exports_files([
+    "MODULE.bazel",
+])
+
+signing_tool(
+    name = "local_opentitantool",
+    testonly = True,
+    location = "local",
+    tool = "@opentitan_devbundle//:opentitantool/opentitantool",
+)
+
+keyset(
+    name = "fake_ecdsa_keyset",
+    testonly = True,
+    build_setting_default = "",
+    keys = {
+        "@opentitan_devbundle//:fake_keys/app_prod_ecdsa_p256.der": "app_prod_0",
+        "@opentitan_devbundle//:fake_keys/app_dev_ecdsa_p256.der": "app_dev_0",
+        "@opentitan_devbundle//:fake_keys/app_test_ecdsa_p256.der": "app_test_0",
+        "@opentitan_devbundle//:fake_keys/app_unauthorized_ecdsa_p256.der": "app_unauthorized_0",
+    },
+    profile = "local",
+    tool = ":local_opentitantool",
+)
+
+keyset(
+    name = "fake_spx_keyset",
+    testonly = True,
+    build_setting_default = "",
+    keys = {
+        "@opentitan_devbundle//:fake_keys/app_prod_spx.pem": "app_prod_0",
+        "@opentitan_devbundle//:fake_keys/app_dev_spx.pem": "app_dev_0:domain=PreHashedSha256",
+    },
+    profile = "local",
+    tool = ":local_opentitantool",
+)
+
+sign_bin(
+    name = "empty_signed_binary",
+    testonly = True,
+    bin = "@opentitan_signing_infra//signing/tests:empty_unsigned_binary",
+    ecdsa_key = {":fake_ecdsa_keyset": "app_dev_0"},
+    manifest = "@opentitan_signing_infra//signing/tests:test_manifest",
+    spx_key = {":fake_spx_keyset": "app_dev_0"},
+)
+
+# Test that we can run the hsmtool binary from a downstream repo
+sh_test(
+    name = "hsmtool_help_test",
+    srcs = [
+        "hsmtool_help_test.sh",
+    ],
+    data = [
+        "@opentitan_signing_infra//hsmtool",
+    ],
+    env = {
+        "HSMTOOL": "$(rootpath @opentitan_signing_infra//hsmtool:hsmtool)",
+    },
+)
+
+# Test that we can link against and use the hsmlib crate
+rust_test(
+    name = "hsmlib_integration_test",
+    srcs = [
+        "hsmlib_test.rs",
+    ],
+    deps = [
+        "@opentitan_signing_infra//hsmtool:hsmlib",
+    ],
+)
+
+# Test that we can use the exported signing rules to sign a binary using a
+# local opentitantool configured via the opentitantool toolchain.
+signature_test(
+    name = "valid_signature_test",
+    srcs = [
+        ":empty_signed_binary",
+    ],
+    ecdsa_key = {":fake_ecdsa_keyset": "app_dev_0"},
+    spx_domain = "PrehashedSha256",
+    spx_key = {":fake_spx_keyset": "app_dev_0"},
+)
+
+test_suite(
+    name = "integration_tests",
+    tags = ["manual"],
+    tests = [
+        ":hsmlib_integration_test",
+        ":hsmtool_help_test",
+        ":valid_signature_test",
+    ],
+)

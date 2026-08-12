@@ -1,0 +1,66 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+module(
+    name = "integration_example",
+    version = "0.0.0",
+)
+
+# Dependency on the upstream `opentitan_signing_infra` project.
+bazel_dep(
+    name = "opentitan_signing_infra",
+    version = "0.0.0",
+)
+local_path_override(
+    module_name = "opentitan_signing_infra",
+    path = "..",
+)
+
+# Bazel dependencies for testing
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_cc", version = "0.2.4")
+bazel_dep(name = "rules_rust_bindgen", version = "0.59.2")
+bazel_dep(name = "rules_rust", version = "0.59.2")
+bazel_dep(name = "toolchains_llvm", version = "1.5.0")
+bazel_dep(name = "opentitan_devbundle", version = "0.0.1")
+archive_override(
+    module_name = "opentitan_devbundle",
+    integrity = "sha256-LGKvET6WY+P4kwrZMSnkBrkqxS1f/ES/rmkPBQmfnwg=",
+    url = "https://github.com/lowRISC/opentitan/releases/download/devbundle-2026-06-02-1/devbundle.tar.xz",
+)
+
+# Register a Rust Toolchain to use the correct rust version
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.repository_set(
+    name = "rust_integration_test",
+    edition = "2024",
+    exec_triple = "x86_64-unknown-linux-gnu",
+    sha256s = {
+        "rustc-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "48c2a42de9e92fcae8c24568f5fe40d5734696a6f80e83cc6d46eef1a78f13c9",
+        "clippy-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "5b6466419693a05365827378145014a37ae74fb2948fab390d5210a524792ed8",
+        "cargo-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "9853db03d68578a30972e2755c89c66aec035fec641cf8f3a7117c81eec2578d",
+        "llvm-tools-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "1376ef6021578fcfe94fad66396f7ca6d2f19bda5a417f8746a2b32ccf3f4470",
+        "rust-std-1.90.0-x86_64-unknown-linux-gnu.tar.xz": "663f4ab7945b392d5e5294dec1b050a66820a20e86f084ec37eeb0f2f7ff5569",
+    },
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    target_triple = "x86_64-unknown-linux-gnu",
+    versions = ["1.90.0"],
+)
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+# Register a Rust Bindgen toolchain, using a pre-built LLVM
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
+llvm.toolchain(llvm_version = "17.0.6")
+use_repo(llvm, "llvm_toolchain", "llvm_toolchain_llvm")
+
+register_toolchains("//third_party/rust:bindgen_toolchain")
+
+# Register a custom OpenTitanTool toolchain
+register_toolchains("//toolchains:custom_opentitantool_toolchain")

@@ -1,0 +1,18 @@
+# Copyright lowRISC contributors (OpenTitan project).
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+
+load("@opentitan_signing_infra//toolchains/opentitantool:opentitantool.bzl", "opentitantool")
+
+package(default_visibility = ["//visibility:public"])
+
+opentitantool(
+    name = "custom_opentitantool",
+    tool = "@opentitan_devbundle//:opentitantool/opentitantool",
+)
+
+toolchain(
+    name = "custom_opentitantool_toolchain",
+    toolchain = ":custom_opentitantool",
+    toolchain_type = "@opentitan_signing_infra//toolchains/opentitantool:toolchain_type",
+)
