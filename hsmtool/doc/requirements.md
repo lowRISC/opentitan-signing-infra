@@ -27,8 +27,6 @@ Examples include:
 
 `hsmtool` should facilitate the import and export of keys in standard forms (such as PEM encoded PKCS#8).
 
-TODO: understand and figure out how key wrapping and unwrapping works with import/export.
-
 ### Object Management
 
 The PKCS#11 interface presents a generic object/attribute mechanism for managing objects known to the HSM.
