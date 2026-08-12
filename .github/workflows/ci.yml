@@ -105,3 +105,6 @@ jobs:
 
       - name: Run hsmtool tests
         run: bazelisk test --test_output=all --build_tests_only //hsmtool/...
+
+      - name: Run signing rule tests
+        run: bazelisk test --test_output=all --build_tests_only //signing/...
