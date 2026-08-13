@@ -13,6 +13,7 @@ unmaintained = "workspace"
 skip = [
     { crate = "syn", reason = "multiple versions" },
     { crate = "windows-sys", reason = "multiple versions" },
+    { crate = "zerocopy", reason = "multiple versions" },
 ]
 
 [licenses]
