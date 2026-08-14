@@ -72,5 +72,3 @@ These steps still worked as of commit [`0135da5e167491a7709d972789278acd2f4cec4e
    You can do this by building the relevant `offline_signed_{}` targets and using them to replace the `empty_test_slot_a_fpga_cw310_{}.signed.bin` binaries.
 
 **TODO: consider converting to a script to generate these artifacts automatically.**
-
-Note that RSA signing is untested as it is intended to be deprecated in the near future.
