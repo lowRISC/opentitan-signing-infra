@@ -81,6 +81,25 @@ genrule(
     visibility = ["//visibility:public"],
 )
 
+# Perform a sign->verify roundtrip with hsmtool to check the implementations are consistent.
+sh_test(
+    name = "slh_dsa_roundtrip_test",
+    srcs = ["hsmtool_roundtrip_runner.sh"],
+    args = ["$(rootpath :tqbf.txt)"],
+    data = [
+        "tqbf.txt",
+        "//hsmtool",
+        "//signing/softhsm",
+        "//signing/softhsm:conf",
+        "@softhsm2//:gen_dir",
+    ],
+    env = {
+        "SOFTHSM2_CONF": "$(rootpath //signing/softhsm:conf)",
+        "HSMTOOL_MODULE": "$(rootpath @softhsm2//:gen_dir)/lib/softhsm/libsofthsm2.so",
+    },
+    deps = [":test_lib"],
+)
+
 # ECDSA-Sign a digest with opentitantool and then verify the signature with hsmtool.
 sh_test(
     name = "ecdsa_opentitantool_sign_hsmtool_verify_test",
