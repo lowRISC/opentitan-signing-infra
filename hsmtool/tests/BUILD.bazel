@@ -28,6 +28,7 @@ sh_test(
     env = {
         "SOFTHSM2_CONF": "$(rootpath //signing/softhsm:conf)",
     },
+    deps = [":test_lib"],
 )
 
 # Test SLH-DSA key generation for various SHA2/SHAKE parameter sets.
@@ -52,6 +53,7 @@ sh_test(
         env = {
             "SOFTHSM2_CONF": "$(rootpath //signing/softhsm:conf)",
         },
+        deps = [":test_lib"],
     )
     for parameter_set in [
         "sha2-128s",
