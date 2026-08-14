@@ -37,19 +37,19 @@ jobs:
           repository-cache: false
 
       - name: Check Git commit metadata
-        if: "(success() || failure()) && !startsWith(github.ref, 'refs/tags/')"
+        if: "!cancelled() && !startsWith(github.ref, 'refs/tags/')"
         run: ./scripts/ci/lint_commits.sh "$GITHUB_BASE_REF"
 
       - name: Check license headers
-        if: success() || failure()
+        if: "!cancelled()"
         run: bazelisk run //quality:license_check
 
       - name: Check Rust formatting
-        if: success() || failure()
+        if: "!cancelled()"
         run: bazelisk test //quality:rustfmt_check
 
       - name: Check Rust dependencies
-        if: success() || failure()
+        if: "!cancelled()"
         uses: EmbarkStudios/cargo-deny-action@v2
         # FIXME: Resolve existing errors with `ml-dsa` and remove this line
         continue-on-error: true
@@ -60,7 +60,7 @@ jobs:
 
       # We run advisories separately so new advisories do not block CI
       - name: Check Rust dependency advisories
-        if: success() || failure()
+        if: "!cancelled()"
         uses: EmbarkStudios/cargo-deny-action@v2
         continue-on-error: true
         with:
@@ -69,17 +69,17 @@ jobs:
           arguments: --locked
 
       - name: Check Bazel formatting
-        if: success() || failure()
+        if: "!cancelled()"
         run: bazelisk test //quality:buildifier_check
 
       - name: Check for uncommitted Bazel lockfile changes
-        if: success() || failure()
+        if: "!cancelled()"
         run: |
           bazelisk mod deps --lockfile_mode=update
           git diff --exit-code MODULE.bazel.lock
 
       - name: Check for uncommitted Cargo lockfile changes
-        if: success() || failure()
+        if: "!cancelled()"
         run: |
           touch third_party/rust/fake.rs
           cargo check --locked --manifest-path=third_party/rust/Cargo.toml
