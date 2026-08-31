@@ -35,7 +35,6 @@ def sign_binary(ctx, opentitantool, **kwargs):
       opentitantool: An opentitantool FilesToRun provider.
       **kwargs: Overrides of values normally retrived from the context object.
         ecdsa_key: The ECDSA signing key.
-        rsa_key: The RSA signing key.
         spx_key: The SPHINCS+ signing key.
         bin: The input binary.
         manifest: The manifest header.
@@ -45,7 +44,6 @@ def sign_binary(ctx, opentitantool, **kwargs):
           digest: The SHA256 hash over the pre-signing binary.
           spxmsg: The SPHINCS+ message to be signed.
           ecdsa_sig: The ECDSA signature of the digest.
-          rsa_sig: The RSA signature of the digest.
           spx_sig: The SPHINCS+ signature over the message.
           signed: The final signed binary.
     """
@@ -54,18 +52,6 @@ def sign_binary(ctx, opentitantool, **kwargs):
 
     ecdsa_key = key_from_dict(key_attr, "ecdsa_key")
 
-    rsa_attr = get_override(ctx, "attr.rsa_key", kwargs)
-    rsa_attr = _clear_if_none_key(rsa_attr)
-
-    if rsa_attr and key_attr:
-        fail("Only one of ECDSA or RSA key should be provided")
-
-    if rsa_attr:
-        # Select RSA as the key attribute since at this point we have already
-        # determined that only one of ECDSA or RSA key should be provided.
-        key_attr = rsa_attr
-
-    rsa_key = key_from_dict(rsa_attr, "rsa_key")
     spx_key = key_from_dict(get_override(ctx, "attr.spx_key", kwargs), "spx_key")
 
     manifest = get_override(ctx, "attr.manifest", kwargs)
@@ -76,17 +62,15 @@ def sign_binary(ctx, opentitantool, **kwargs):
         get_override(ctx, "file.bin", kwargs),
         manifest,
         ecdsa_key,
-        rsa_key,
         spx_key,
         keyname_in_filenames = True,
     )
     tool, signing_func, profile = signing_tool_info(ctx, key_attr, opentitantool)
-    ecdsa_sig, rsa_sig, spx_sig = signing_func(
+    ecdsa_sig, spx_sig = signing_func(
         ctx,
         tool,
         artifacts.digest,
         ecdsa_key,
-        rsa_key,
         artifacts.spxmsg,
         spx_key,
         profile,
@@ -96,7 +80,6 @@ def sign_binary(ctx, opentitantool, **kwargs):
         opentitantool,
         artifacts.pre,
         ecdsa_sig,
-        rsa_sig,
         spx_sig,
     )
     return {
@@ -104,7 +87,6 @@ def sign_binary(ctx, opentitantool, **kwargs):
         "digest": artifacts.digest,
         "spxmsg": artifacts.spxmsg,
         "ecdsa_sig": ecdsa_sig,
-        "rsa_sig": rsa_sig,
         "spx_sig": spx_sig,
         "signed": signed,
     }
@@ -123,10 +105,6 @@ sign_bin = rule(
         "ecdsa_key": attr.label_keyed_string_dict(
             allow_files = True,
             doc = "ECDSA public key to validate this image",
-        ),
-        "rsa_key": attr.label_keyed_string_dict(
-            allow_files = True,
-            doc = "RSA public key to validate this image",
         ),
         "spx_key": attr.label_keyed_string_dict(
             allow_files = True,

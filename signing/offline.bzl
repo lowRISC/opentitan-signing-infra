@@ -23,7 +23,6 @@ load("//toolchains/opentitantool:opentitantool.bzl", "OPENTITANTOOL_TOOLCHAIN")
 def _offline_presigning_artifacts(ctx):
     opentitantool = ctx.toolchains[OPENTITANTOOL_TOOLCHAIN].tools.executable
     ecdsa_key = key_from_dict(ctx.attr.ecdsa_key, "ecdsa_key")
-    rsa_key = key_from_dict(ctx.attr.rsa_key, "rsa_key")
     spx_key = key_from_dict(ctx.attr.spx_key, "spx_key")
     digests = []
     bins = []
@@ -35,7 +34,6 @@ def _offline_presigning_artifacts(ctx):
             src,
             ctx.attr.manifest,
             ecdsa_key,
-            rsa_key,
             spx_key,
         )
         bins.append(artifacts.pre)
@@ -66,11 +64,6 @@ offline_presigning_artifacts = rule(
             allow_files = True,
             doc = "ECDSA public key to validate this image",
         ),
-        "rsa_key": attr.label_keyed_string_dict(
-            providers = [[KeySetInfo], [DefaultInfo]],
-            allow_files = True,
-            doc = "RSA public key to validate this image",
-        ),
         "spx_key": attr.label_keyed_string_dict(
             providers = [[KeySetInfo], [DefaultInfo]],
             allow_files = True,
@@ -81,39 +74,6 @@ offline_presigning_artifacts = rule(
         OPENTITANTOOL_TOOLCHAIN,
     ],
     doc = "Create the pre-signing artifacts for a given input binary, for use in offline signing flows.",
-)
-
-def _offline_fake_rsa_sign(ctx):
-    opentitantool = ctx.toolchains[OPENTITANTOOL_TOOLCHAIN].tools.executable
-    outputs = []
-    rsa_key = key_from_dict(ctx.attr.rsa_key, "rsa_key")
-    tool, _, _ = signing_tool_info(ctx, ctx.attr.rsa_key, opentitantool)
-    for file in ctx.files.srcs:
-        # Skip the presigning script.
-        if file.basename.endswith(".json"):
-            continue
-
-        # Skip any SPHINCS+ messages if we're using the `Pure` domain instead of the `PreHashedSha256` domain
-        if file.basename.endswith(".spx-message"):
-            continue
-        _, sig, _ = local_sign(ctx, tool, file, None, rsa_key)
-        outputs.append(sig)
-    return [DefaultInfo(files = depset(outputs), data_runfiles = ctx.runfiles(files = outputs))]
-
-offline_fake_rsa_sign = rule(
-    implementation = _offline_fake_rsa_sign,
-    attrs = {
-        "srcs": attr.label_list(allow_files = True, doc = "Digest files to sign"),
-        "rsa_key": attr.label_keyed_string_dict(
-            allow_files = True,
-            mandatory = True,
-            doc = "RSA private key to sign this image",
-        ),
-    },
-    toolchains = [
-        OPENTITANTOOL_TOOLCHAIN,
-    ],
-    doc = "Create detached RSA signatures using on-disk private keys via opentitantool.",
 )
 
 def _offline_fake_ecdsa_sign(ctx):
@@ -129,7 +89,7 @@ def _offline_fake_ecdsa_sign(ctx):
         # Skip any SPHINCS+ messages if we're using the `Pure` domain instead of the `PreHashedSha256` domain
         if file.basename.endswith(".spx-message"):
             continue
-        sig, _, _ = local_sign(ctx, tool, file, ecdsa_key, None)
+        sig, _ = local_sign(ctx, tool, file, ecdsa_key, None)
         outputs.append(sig)
     return [DefaultInfo(files = depset(outputs), data_runfiles = ctx.runfiles(files = outputs))]
 
@@ -186,9 +146,6 @@ offline_fake_spx_sign = rule(
 )
 
 def _offline_signature_attach(ctx):
-    if ctx.files.rsa_signatures and ctx.files.ecdsa_signatures:
-        fail("Only one of RSA or ECDSA signatures should be provided")
-
     opentitantool = ctx.toolchains[OPENTITANTOOL_TOOLCHAIN].tools.executable
     inputs = {}
     for src in ctx.attr.srcs:
@@ -200,11 +157,6 @@ def _offline_signature_attach(ctx):
             for file in src[DefaultInfo].files.to_list():
                 f, _ = paths.split_extension(file.basename)
                 inputs[f] = {"bin": file}
-    for sig in ctx.files.rsa_signatures:
-        f, _ = paths.split_extension(sig.basename)
-        if f not in inputs:
-            fail("RSA signature {} does not have a corresponding entry in srcs".format(sig.path))
-        inputs[f]["rsa_sig"] = sig
     for sig in ctx.files.ecdsa_signatures:
         f, _ = paths.split_extension(sig.basename)
         if f not in inputs:
@@ -221,15 +173,14 @@ def _offline_signature_attach(ctx):
         if inputs[f].get("bin") == None:
             print("WARNING: No pre-signed binary for", f)
             continue
-        if inputs[f].get("rsa_sig") == None and inputs[f].get("ecdsa_sig") == None:
-            print("WARNING: No RSA or ECDSA signature file for", f)
+        if inputs[f].get("ecdsa_sig") == None:
+            print("WARNING: No ECDSA signature file for", f)
             continue
         out = post_signing_attach(
             ctx,
             opentitantool,
             inputs[f]["bin"],
             inputs[f].get("ecdsa_sig"),
-            inputs[f].get("rsa_sig"),
             inputs[f].get("spx_sig"),
         )
         outputs.append(out)
@@ -240,7 +191,6 @@ offline_signature_attach = rule(
     attrs = {
         "srcs": attr.label_list(allow_files = True, providers = [[PreSigningBinaryInfo], [DefaultInfo]], doc = "Binary files to sign"),
         "ecdsa_signatures": attr.label_list(allow_files = True, doc = "ECDSA signed digest files"),
-        "rsa_signatures": attr.label_list(allow_files = True, doc = "RSA signed digest files"),
         "spx_signatures": attr.label_list(allow_files = True, doc = "SPX+ signed digest files"),
     },
     toolchains = [

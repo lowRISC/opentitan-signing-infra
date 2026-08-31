@@ -12,7 +12,7 @@ binary.
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//signing:util.bzl", "key_ext")
 
-def presigning_artifacts(ctx, opentitantool, src, manifest_attr, ecdsa_key, rsa_key, spx_key, basename = None, keyname_in_filenames = False):
+def presigning_artifacts(ctx, opentitantool, src, manifest_attr, ecdsa_key, spx_key, basename = None, keyname_in_filenames = False):
     """Create the pre-signing artifacts for a given input binary.
 
     Applies the manifest and public components of the keys.  Creates the
@@ -25,7 +25,6 @@ def presigning_artifacts(ctx, opentitantool, src, manifest_attr, ecdsa_key, rsa_
         src: file; The source binary
         manifest_attr: Target; The manifest target.
         ecdsa_key: struct; The ECDSA public key.
-        rsa_key: struct; The RSA public key.
         spx_key: struct; The SPX+ public key.
         basename: str; Optional basename of the outputs.  Defaults to src.basename.
         keyname_in_filenames: bool; Whether or not to use the key names to construct filenames.
@@ -35,10 +34,7 @@ def presigning_artifacts(ctx, opentitantool, src, manifest_attr, ecdsa_key, rsa_
         struct: A struct containing the pre-signing binary, the digest & spx message files, and
                 the JSON signing directive script.
     """
-    if ecdsa_key and rsa_key:
-        fail("Only one of ECDSA or RSA key should be provided")
-
-    kext = key_ext(ecdsa_key, rsa_key, spx_key)
+    kext = key_ext(ecdsa_key, spx_key)
     if not basename:
         basename = src.basename
     if keyname_in_filenames:
@@ -65,14 +61,11 @@ def presigning_artifacts(ctx, opentitantool, src, manifest_attr, ecdsa_key, rsa_
     if manifest_file:
         inputs.append(manifest_file)
 
-    ecdsa_or_rsa_args = []
+    ecdsa_args = []
     if ecdsa_key:
         selected_ecdsa_key = getattr(ecdsa_key, "file", None)
-        ecdsa_or_rsa_args.append("--ecdsa-key={}".format(selected_ecdsa_key.path))
+        ecdsa_args.append("--ecdsa-key={}".format(selected_ecdsa_key.path))
         inputs.append(selected_ecdsa_key)
-    elif rsa_key:
-        ecdsa_or_rsa_args.append("--rsa-key={}".format(rsa_key.file.path))
-        inputs.append(rsa_key.file)
 
     spx_args = []
     spx_domain = None
@@ -99,12 +92,12 @@ def presigning_artifacts(ctx, opentitantool, src, manifest_attr, ecdsa_key, rsa_
     ctx.actions.run(
         outputs = [pre],
         inputs = inputs,
-        arguments = args + ecdsa_or_rsa_args + spx_args,
+        arguments = args + ecdsa_args + spx_args,
         executable = opentitantool,
         mnemonic = "PreSigningArtifacts",
     )
 
-    # Compute digest to be signed with RSA or ECDSA.
+    # Compute digest to be signed with ECDSA.
     digest = ctx.actions.declare_file("{}.digest".format(basename))
     ctx.actions.run(
         outputs = [digest],
@@ -121,26 +114,15 @@ def presigning_artifacts(ctx, opentitantool, src, manifest_attr, ecdsa_key, rsa_
         mnemonic = "PreSigningDigest",
     )
 
-    if rsa_key:
-        signing_directives.append(struct(
-            command = "rsa-sign",
-            id = None,
-            label = rsa_key.name,
-            format = "Sha256Hash",
-            little_endian = True,
-            output = "{}.rsa_sig".format(basename),
-            input = "{}.digest".format(basename),
-        ))
-    elif ecdsa_key:
-        signing_directives.append(struct(
-            command = "ecdsa-sign",
-            id = None,
-            label = ecdsa_key.name,
-            format = "Sha256Hash",
-            little_endian = True,
-            output = "{}.ecdsa_sig".format(basename),
-            input = "{}.digest".format(basename),
-        ))
+    signing_directives.append(struct(
+        command = "ecdsa-sign",
+        id = None,
+        label = ecdsa_key.name,
+        format = "Sha256Hash",
+        little_endian = True,
+        output = "{}.ecdsa_sig".format(basename),
+        input = "{}.digest".format(basename),
+    ))
 
     # Compute message to be signed with SPX+.
     spxmsg = None
@@ -186,7 +168,7 @@ def presigning_artifacts(ctx, opentitantool, src, manifest_attr, ecdsa_key, rsa_
 
     return struct(pre = pre, digest = digest, spxmsg = spxmsg, script = signing_directives)
 
-def post_signing_attach(ctx, opentitantool, pre, ecdsa_sig, rsa_sig, spx_sig):
+def post_signing_attach(ctx, opentitantool, pre, ecdsa_sig, spx_sig):
     """Attach signatures to an unsigned binary.
 
     Args:
@@ -194,14 +176,10 @@ def post_signing_attach(ctx, opentitantool, pre, ecdsa_sig, rsa_sig, spx_sig):
         opentitantool: file; The opentitantool binary.
         pre: file; The pre-signed input binary.
         ecdsa_sig: file; The ECDSA-signed digest of the binary.
-        rsa_sig: file; The RSA-signed digest of the binary.
         spx_sig: file; The SPX-signed message of the binary.
     Returns:
         file: The signed binary.
     """
-    if ecdsa_sig and rsa_sig:
-        fail("Only one of ECDSA or RSA signature should be provided")
-
     signed = ctx.actions.declare_file(paths.replace_extension(pre.basename, ".signed.bin"))
     inputs = [pre]
 
@@ -215,10 +193,6 @@ def post_signing_attach(ctx, opentitantool, pre, ecdsa_sig, rsa_sig, spx_sig):
         "--output={}".format(signed.path),
         pre.path,
     ]
-
-    if rsa_sig:
-        inputs.append(rsa_sig)
-        args.append("--rsa-signature={}".format(rsa_sig.path))
 
     if ecdsa_sig:
         inputs.append(ecdsa_sig)
