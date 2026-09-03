@@ -9,8 +9,6 @@ executable is used in signing rule implementations for signing framing operation
 for offline signing, as well as to test hsmtool for local development & CI.
 """
 
-load("@opentitan_signing_infra//toolchains:defs.bzl", "host_tool_transition")
-
 OPENTITANTOOL_TOOLCHAIN = "@opentitan_signing_infra//toolchains/opentitantool:toolchain_type"
 
 OpenTitanToolInfo = provider(
@@ -33,10 +31,7 @@ opentitantool = rule(
             allow_single_file = True,
             mandatory = True,
             executable = True,
-            # cfg = "exec" should be sufficient, but we transition to a "golden"
-            # configuration to standardize tool configuration & avoid build flags
-            # propagating into dependencies.
-            cfg = host_tool_transition,
+            cfg = "exec",
         ),
     },
     doc = "Toolchain for opentitantool, used in signing rules",

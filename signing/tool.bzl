@@ -6,7 +6,6 @@
 """
 
 load("//signing:util.bzl", "SigningToolInfo")
-load("//toolchains:defs.bzl", "host_tool_transition")
 
 def _signing_tool(ctx):
     env = {k: ctx.expand_location(v, ctx.attr.data) for k, v in ctx.attr.env.items()}
@@ -24,7 +23,7 @@ signing_tool = rule(
             mandatory = True,
             executable = True,
             allow_single_file = True,
-            cfg = host_tool_transition,
+            cfg = "exec",
             doc = "The signing tool binary",
         ),
         "data": attr.label_list(
