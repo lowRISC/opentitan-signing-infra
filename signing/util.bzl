@@ -99,22 +99,19 @@ def signing_tool_info(ctx, key, opentitantool):
         return toolinfo, local_sign, None
     fail("Expected a KeySetInfo or DefaultInfo provider")
 
-def key_ext(ecdsa, rsa, spx):
+def key_ext(ecdsa, spx):
     """Returns the key extension for a given key.
 
     Args:
         ecdsa: struct; The ECDSA key.
-        rsa: struct; The RSA key.
         spx: struct; The SPHINCS+ key.
     Returns:
         str: The key extension.
     """
     if ecdsa:
         name = ecdsa.name
-    elif rsa:
-        name = rsa.name
     else:
-        fail("Expected an ECDSA or RSA key")
+        fail("Expected an ECDSA key")
 
     if spx:
         return ".{}.{}".format(name, spx.name)
@@ -155,10 +152,10 @@ def local_spx_sign(ctx, tool, spx_msg, spx_key):
     )
     return spx_sig
 
-def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = None, profile = None):
+def local_sign(ctx, tool, digest, ecdsa_key, spxmsg = None, spx_key = None, profile = None):
     """Sign a digest with local on-disk private keys.
 
-    Either ECDSA or RSA private keys are used for signing (but not both).
+    ECDSA private keys are used for signing.
     A SPHINCS+ key and message can additionally be specified to create additional
     SPHINCS+ signature files.
 
@@ -167,29 +164,20 @@ def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = N
         tool: SigningToolInfo; A provider refering to the opentitantool binary.
         digest: file; The digest of the binary to be signed.
         ecdsa_key: struct; The ECDSA private key.
-        rsa_key: struct; The RSA private key.
         spxmsg: file; The SPHINCS+ message to be signed.
         spx_key: struct; The SPHINCS+ private key.
         profile: str; The token profile. Intentionally unused by this function.
     Returns:
-        file, file, file: The ECDSA, RSA and SPHINCS+ signature files.
+        file, file: The ECDSA and SPHINCS+ signature files.
     """
-    if rsa_key and ecdsa_key:
-        fail("Only one of ECDSA or RSA key should be provided")
-
     inputs = [digest]
-    if rsa_key:
-        output_sig = ctx.actions.declare_file(paths.replace_extension(digest.basename, ".rsa_sig"))
-        inputs.append(rsa_key.file)
-        key_path = rsa_key.file.path
-        key_command = "rsa"
-    elif ecdsa_key:
+    if ecdsa_key:
         output_sig = ctx.actions.declare_file(paths.replace_extension(digest.basename, ".ecdsa_sig"))
         inputs.append(ecdsa_key.file)
         key_path = ecdsa_key.file.path
         key_command = "ecdsa"
     else:
-        fail("Expected an ECDSA or RSA key")
+        fail("Expected an ECDSA key")
 
     ctx.actions.run(
         outputs = [output_sig],
@@ -204,24 +192,19 @@ def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = N
             key_path,
         ],
         executable = tool.tool,
-        mnemonic = "LocalRsaOrEcdsaSign",
+        mnemonic = "LocalEcdsaSign",
     )
 
     spx_sig = None
     if spxmsg and spx_key:
         spx_sig = local_spx_sign(ctx, tool, spxmsg, spx_key)
 
-    if rsa_key:
-        return None, output_sig, spx_sig
-    elif ecdsa_key:
-        return output_sig, None, spx_sig
-    else:
-        fail("Expected an ECDSA or RSA key")
+    return output_sig, spx_sig
 
-def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = None, profile = None):
+def hsmtool_sign(ctx, tool, digest, ecdsa_key, spxmsg = None, spx_key = None, profile = None):
     """Sign a digest with a token-provided private key.
 
-    Either ECDSA or RSA private keys are used for signing (but not both).
+    ECDSA private keys are used for signing.
     A SPHINCS+ key and message can additionally be specified to create additional
     SPHINCS+ signature files. An HSMtool profile must be provided.
 
@@ -230,30 +213,23 @@ def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key =
         tool: file; A SigningToolInfo provider referring to the hsmtool binary.
         digest: file; The digest of the binary to be signed.
         ecdsa_key: struct; The ECDSA private key.
-        rsa_key: struct; The RSA private key.
         spxmsg: file; The SPHINCS+ message to be signed.
         spx_key: struct; The SPHINCS+ private key.
         profile: str; The hsmtool profile.
     Returns:
-        file, file, file: The RSA and SPHINCS+ signature files.
+        file, file: The ECDSA and SPHINCS+ signature files.
     """
     if not profile:
         fail("Missing the `hsmtool` profile")
 
-    if rsa_key:
-        cmd = "rsa"
-        sig = ctx.actions.declare_file(paths.replace_extension(digest.basename, ".rsa-sig"))
-        label = rsa_key.name
-        mnemonic = "HsmtoolRsaSign"
-        retval = (None, sig, None)
-    elif ecdsa_key:
+    if ecdsa_key:
         cmd = "ecdsa"
         sig = ctx.actions.declare_file(paths.replace_extension(digest.basename, ".ecdsa-sig"))
         label = ecdsa_key.name
         mnemonic = "HsmtoolEcdsaSign"
         retval = (sig, None, None)
     else:
-        fail("Expected either rsa_key or ecdsa_key; got neither")
+        fail("Expected an ECDSA key")
 
     ctx.actions.run(
         outputs = [sig],
@@ -316,9 +292,4 @@ def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key =
             mnemonic = "HsmtoolSpxSign",
         )
 
-    if rsa_key:
-        return None, sig, spx_sig
-    elif ecdsa_key:
-        return sig, None, spx_sig
-    else:
-        fail("Expected an ECDSA or RSA key")
+    return sig, spx_sig

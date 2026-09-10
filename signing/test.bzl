@@ -5,9 +5,6 @@
 load("//signing:util.bzl", "KeySetInfo", "key_from_dict")
 load("//toolchains/opentitantool:opentitantool.bzl", "OPENTITANTOOL_TOOLCHAIN")
 
-# Note: RSA keys are not used and as such are not supported in signature tests;
-# support for RSA keys will be dropped in the future.
-
 def _signature_test_impl(ctx):
     keys = []
     opentitantool = ctx.toolchains[OPENTITANTOOL_TOOLCHAIN].tools.executable

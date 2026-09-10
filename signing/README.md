@@ -102,7 +102,7 @@ The signing operation is **framed** as follows:
 1. Before signing we must first generate *pre-signing artifacts*.
    We apply the manifest and the public components of the keys to create a "pre-signing binary" (the input with the manifest changes applied), the digest, and the SPHINCS+ message files.
 2. We then create signatures for the binary using the specified signing tool with the aforementioned artifacts.
-3. We finally attach any signatures (any ECDSA, RSA or SPHINCS+ signatures returned by the signing tool) to the unsigned binary to produce the signed artifact.
+3. We finally attach any signatures (any ECDSA or SPHINCS+ signatures returned by the signing tool) to the unsigned binary to produce the signed artifact.
 
 The implementation of the framing operations can be found in [`framing.bzl`](./framing.bzl), whereas the implementation of the signing operation and rule can be found in [`signing.bzl`](./signing.bzl).
 
@@ -112,7 +112,6 @@ As an input, it takes:
 * `opentitantool`: An opentitantool executable `FilesToRunProvider`.
 * `**kwargs` Any overrides of values normally retrieved from the context object, which may include:
   * `ecdsa_key`: The ECDSA signing key (string dict).
-  * `rsa_key`: The RSA signing key (string dict).
   * `spx_key`: The SPHINCS+ signing key (string dict).
   * `bin`: The input binary to sign.
   * `manifest`: The manifest header.
@@ -122,11 +121,10 @@ This in turn then returns a string-keyed dictionary of artifacts, with the follo
 * `digest`: The SHA256 hash over the pre-signing binary.
 * `spxmsg`: The SPHINCS+ message to be signed.
 * `ecdsa_sig`: The ECDSA signature of the digest.
-* `rsa_sig`: The RSA signature of the digest.
 * `spx_sig`: The SPHINCS+ signature over the message.
 * `signed`: The final signed binary.
 
-For use as a standalone rule, the `sign_bin()` rule simply takes the `bin`, `manifest`, `ecdsa_key`, `rsa_key` and/or `spx_key` and will produce a signed binary by taking OpenTitanTool from the toolchain.
+For use as a standalone rule, the `sign_bin()` rule simply takes the `bin`, `manifest`, `ecdsa_key` and/or `spx_key` and will produce a signed binary by taking OpenTitanTool from the toolchain.
 
 ## Offline Signing
 
@@ -139,18 +137,16 @@ This rule has the following attributes:
 * `srcs`: The artifacts to generate digests for.
 * `manifest`: The manifest for this image.
 * `ecdsa_key`: The ECDSA signing key (string dict).
-* `rsa_key`: The RSA signing key (string dict).
 * `spx_key`: The SPHINCS+ signing key (string dict).
 
 After you have performed the offline signature generation, the `offline_signature_attach()` rule then allows you to attach these signatures and generate a signed binary.
 This rule has the following attributes:
 * `srcs`: The artifacts to sign.
 * `ecdsa_signatures`: A list of labels of ECDSA-signed digest files.
-* `rsa_signatures`: A list of labels of RSA-signed digest files.
 * `spx_signatures`: A list of labels of SPHINCS+-signed message files.
 
-To test these offline signing rules in a complete workflow, the `offline_fake_ecdsa_sign()`,  `offline_fake_rsa_sign()` and `offline_fake_spx_sign()` rules are available.
-Each rule takes the list of digest files to sign (`srcs`) and their respective private `rsa_key` / `ecdsa_key` / `spx_key` to sign the image.
+To test these offline signing rules in a complete workflow, the `offline_fake_ecdsa_sign()` and `offline_fake_spx_sign()` rules are available.
+Each rule takes the list of digest files to sign (`srcs`) and their respective private `ecdsa_key` / `spx_key` to sign the image.
 This can then be combined with the other offline signing rules to emulate the full offline signing flow without requiring any manual steps.
 
 ## Testing
@@ -163,5 +159,3 @@ This rule has the following attributes:
 * `spx_domain`: Either `""`, `"Pure"`, or `"PrehashedSha256"`.
   This is the SPHINCS+ domain to use for signing.
 * `negative_test`: A boolean indicating whether this is a "negative" test case, i.e. we expect signature verification to fail.
-
-Note that as RSA is unused and intended to be deprecated, RSA signing is not supported for this testing flow.
