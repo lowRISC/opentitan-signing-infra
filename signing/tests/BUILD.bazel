@@ -91,6 +91,81 @@ keyset(
     tool = ":local_opentitantool",
 )
 
+# Generate some artifacts for testing ownership signatures
+
+genrule(
+    name = "hybrid_owner_bin",
+    srcs = [
+        "@opentitan_devbundle//:owner_data/hybrid_owner.json5",
+        "@opentitan_devbundle//:dummy_keys/owner_ecdsa_p256.pub.der",
+        "@opentitan_devbundle//:dummy_keys/owner_spx.pub.pem",
+    ],
+    outs = ["hybrid_owner.bin"],
+    cmd = """
+        $(execpath @opentitan_devbundle//:opentitantool/opentitantool) --rcfile= \\
+            ownership config --input $(location @opentitan_devbundle//:owner_data/hybrid_owner.json5) $@
+    """,
+    tools = ["@opentitan_devbundle//:opentitantool/opentitantool"],
+)
+
+genrule(
+    name = "hybrid_owner_digest",
+    srcs = [":hybrid_owner_bin"],
+    outs = ["hybrid_owner.digest"],
+    cmd = """
+        $(execpath @opentitan_devbundle//:opentitantool/opentitantool) --rcfile= \\
+            ownership digest $(location :hybrid_owner_bin) --bin $@
+    """,
+    tools = ["@opentitan_devbundle//:opentitantool/opentitantool"],
+)
+
+genrule(
+    name = "hybrid_owner_ecdsa_signature",
+    srcs = [
+        ":hybrid_owner_digest",
+        "@opentitan_devbundle//:dummy_keys/owner_ecdsa_p256.der",
+    ],
+    outs = ["hybrid_owner.ecdsa_signature"],
+    cmd = """
+        $(execpath @opentitan_devbundle//:opentitantool/opentitantool) --rcfile= \\
+            ecdsa sign $(location @opentitan_devbundle//:dummy_keys/owner_ecdsa_p256.der) \\
+            --input $(location :hybrid_owner_digest) --output $@
+    """,
+    tools = ["@opentitan_devbundle//:opentitantool/opentitantool"],
+)
+
+genrule(
+    name = "hybrid_owner_spx_signature",
+    srcs = [
+        ":hybrid_owner_digest",
+        "@opentitan_devbundle//:dummy_keys/owner_spx.pem",
+    ],
+    outs = ["hybrid_owner.spx_signature"],
+    cmd = """
+        $(execpath @opentitan_devbundle//:opentitantool/opentitantool) --rcfile= \\
+            spx sign $(location :hybrid_owner_digest) \\
+            $(location @opentitan_devbundle//:dummy_keys/owner_spx.pem) \\
+            --output $@ --domain PrehashedSha256
+    """,
+    tools = ["@opentitan_devbundle//:opentitantool/opentitantool"],
+)
+
+genrule(
+    name = "corrupt_hybrid_owner_ecdsa_signature",
+    srcs = [":hybrid_owner_ecdsa_signature"],
+    outs = ["hybrid_owner.ecdsa_signature.corrupted.bin"],
+    cmd = "cp $(location :hybrid_owner_ecdsa_signature) $(location hybrid_owner.ecdsa_signature.corrupted.bin) && " +
+          "sed -i '1s/^./\\x00/' $(location hybrid_owner.ecdsa_signature.corrupted.bin)",
+)
+
+genrule(
+    name = "corrupt_hybrid_owner_spx_signature",
+    srcs = [":hybrid_owner_spx_signature"],
+    outs = ["hybrid_owner.spx_signature.corrupted.bin"],
+    cmd = "cp $(location :hybrid_owner_spx_signature) $(location hybrid_owner.spx_signature.corrupted.bin) && " +
+          "sed -i '1s/^./\\x00/' $(location hybrid_owner.spx_signature.corrupted.bin)",
+)
+
 # Tests for (online) signing rules
 
 signature_test(
@@ -158,6 +233,57 @@ test_suite(
         ":wrong_ecdsa_key_test",
         ":wrong_spx_key_test",
     ],
+)
+
+# Tests for (online) ownership signing
+
+ownership_signature_test(
+    name = "valid_owner_signature_test",
+    srcs = [":hybrid_owner_bin"],
+    ecdsa_key = "@opentitan_devbundle//:dummy_keys/owner_ecdsa_p256.pub.der",
+    ecdsa_signature = ":hybrid_owner_ecdsa_signature",
+    spx_key = "@opentitan_devbundle//:dummy_keys/owner_spx.pub.pem",
+    spx_signature = ":hybrid_owner_spx_signature",
+)
+
+ownership_signature_test(
+    name = "wrong_owner_ecdsa_key_test",
+    srcs = [":hybrid_owner_bin"],
+    ecdsa_key = "@opentitan_devbundle//:dummy_keys/activate_ecdsa_p256.pub.der",
+    ecdsa_signature = ":hybrid_owner_ecdsa_signature",
+    negative_test = True,
+    spx_key = "@opentitan_devbundle//:dummy_keys/owner_spx.pub.pem",
+    spx_signature = ":hybrid_owner_spx_signature",
+)
+
+ownership_signature_test(
+    name = "wrong_owner_spx_key_test",
+    srcs = [":hybrid_owner_bin"],
+    ecdsa_key = "@opentitan_devbundle//:dummy_keys/owner_ecdsa_p256.pub.der",
+    ecdsa_signature = ":hybrid_owner_ecdsa_signature",
+    negative_test = True,
+    spx_key = "@opentitan_devbundle//:dummy_keys/activate_spx.pub.pem",
+    spx_signature = ":hybrid_owner_spx_signature",
+)
+
+ownership_signature_test(
+    name = "wrong_owner_ecdsa_signature_test",
+    srcs = [":hybrid_owner_bin"],
+    ecdsa_key = "@opentitan_devbundle//:dummy_keys/owner_ecdsa_p256.pub.der",
+    ecdsa_signature = ":corrupt_hybrid_owner_ecdsa_signature",
+    negative_test = True,
+    spx_key = "@opentitan_devbundle//:dummy_keys/owner_spx.pub.pem",
+    spx_signature = ":hybrid_owner_spx_signature",
+)
+
+ownership_signature_test(
+    name = "wrong_owner_spx_signature_test",
+    srcs = [":hybrid_owner_bin"],
+    ecdsa_key = "@opentitan_devbundle//:dummy_keys/owner_ecdsa_p256.pub.der",
+    ecdsa_signature = ":corrupt_hybrid_owner_ecdsa_signature",
+    negative_test = True,
+    spx_key = "@opentitan_devbundle//:dummy_keys/owner_spx.pub.pem",
+    spx_signature = ":corrupt_hybrid_owner_spx_signature",
 )
 
 # Tests for offline signing rules
@@ -252,8 +378,8 @@ OFFLINE_TEST_VARIANTS = {
     for name, (ecdsa_key, spx_key, spx_domain) in OFFLINE_TEST_VARIANTS.items()
 ]
 
-# SPHINCS+ signing uses a non-deterministic optrand, so we cannot expect the signed
-# binaries that are produced to look the same.
+# SPHINCS+ / SLH-DSA signing uses a non-deterministic optrand, so we cannot expect the
+# signed binaries that are produced to look the same.
 #
 # OpenTitanTool currently uses deterministic ECDSA signing (RFC6979), so we can compare
 # to a checked-in binary for ECDSA-only signing. If OpenTitanTool is modified to use

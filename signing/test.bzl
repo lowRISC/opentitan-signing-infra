@@ -62,7 +62,7 @@ signature_test = rule(
         "spx_key": attr.label_keyed_string_dict(
             providers = [[KeySetInfo], [DefaultInfo]],
             allow_files = True,
-            doc = "SPX public key to validate this image",
+            doc = "SPHINCS+ / SLH-DSA public key to validate this image",
         ),
         "negative_test": attr.bool(
             default = False,
@@ -71,10 +71,97 @@ signature_test = rule(
         "spx_domain": attr.string(
             default = "",
             values = ["", "Pure", "PrehashedSha256"],
-            doc = "The SPHINCS+ domain to use for signing.",
+            doc = "The SPHINCS+ / SLH-DSA domain to use for signing.",
         ),
         "_script": attr.label(
             default = "//signing:signature_test.template.sh",
+            doc = "The shell script to execute for the test.",
+            allow_single_file = True,
+            executable = True,
+            cfg = "exec",
+        ),
+    },
+    toolchains = [
+        OPENTITANTOOL_TOOLCHAIN,
+    ],
+    test = True,
+)
+
+def _ownership_signature_test_impl(ctx):
+    keys = []
+    opentitantool = ctx.toolchains[OPENTITANTOOL_TOOLCHAIN].tools.executable
+    script = ctx.actions.declare_file("{}.bash".format(ctx.label.name))
+    ecdsa_key = ctx.attr.ecdsa_key
+    spx_key = ctx.attr.spx_key
+
+    selected_ecdsa_key_path = ""
+    selected_spx_key_path = ""
+    selected_ecdsa_sig_path = ""
+    selected_spx_sig_path = ""
+
+    if ctx.file.ecdsa_key:
+        selected_ecdsa_key_path = ctx.file.ecdsa_key.short_path
+        keys.append(ctx.file.ecdsa_key)
+    if ctx.file.spx_key:
+        selected_spx_key_path = ctx.file.spx_key.short_path
+        keys.append(ctx.file.spx_key)
+
+    if ctx.file.ecdsa_signature:
+        selected_ecdsa_sig_path = ctx.file.ecdsa_signature.short_path
+        keys.append(ctx.file.ecdsa_signature)
+    if ctx.file.spx_signature:
+        selected_spx_sig_path = ctx.file.spx_signature.short_path
+        keys.append(ctx.file.spx_signature)
+
+    files = [f.short_path for f in ctx.files.srcs]
+    ctx.actions.expand_template(
+        template = ctx.file._script,
+        output = script,
+        substitutions = {
+            "@FILES@": " ".join(files),
+            "@OPENTITANTOOL@": opentitantool.executable.short_path,
+            "@ECDSA_KEY@": selected_ecdsa_key_path,
+            "@SPX_KEY@": selected_spx_key_path,
+            "@ECDSA_SIG@": selected_ecdsa_sig_path,
+            "@SPX_SIG@": selected_spx_sig_path,
+            "@IS_NEGATIVE_TEST@": str(ctx.attr.negative_test),
+        },
+        is_executable = True,
+    )
+
+    return [
+        DefaultInfo(
+            runfiles = ctx.runfiles(files = ctx.files.srcs + keys + [opentitantool]),
+            executable = script,
+        ),
+    ]
+
+ownership_signature_test = rule(
+    implementation = _ownership_signature_test_impl,
+    attrs = {
+        "srcs": attr.label_list(allow_files = True, doc = "Owner blocks to verify"),
+        "ecdsa_key": attr.label(
+            allow_single_file = True,
+            doc = "ECDSA public key to validate this image",
+        ),
+        "spx_key": attr.label(
+            allow_single_file = True,
+            doc = "SPHINCS+/SLH-DSA public key to validate this image",
+        ),
+        "ecdsa_signature": attr.label(
+            allow_single_file = True,
+            doc = "File containing the detached ECDSA signature",
+        ),
+        "spx_signature": attr.label(
+            allow_single_file = True,
+            doc = "File containing the detached SPHINCS+/SLH-DSA signature",
+        ),
+        "negative_test": attr.bool(
+            default = False,
+            doc = "Whether this is a negative test case.",
+        ),
+        "_script": attr.label(
+            default = "//signing:ownership_signature_test.template.sh",
             doc = "The shell script to execute for the test.",
             allow_single_file = True,
             executable = True,
