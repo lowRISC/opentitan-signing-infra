@@ -9,6 +9,12 @@ feat: implement SLH-DSA signing and verification using OpenSSL
 - Add support for Hedged and Deterministic signing configurations via SLHDSAMechanismParam / CK_SIGN_ADDITIONAL_CONTEXT.
 - Add comprehensive unit tests (SLHDSATests) and integration tests (SignVerifyTests) for SLH-DSA.
 
+This patch mirrors https://github.com/softhsm/SoftHSMv2/pull/862 whilst it
+had not yet been upstreamed. It will need to be dropped when rebasing on
+a future version of SoftHSMv2.
+
+It adds Pure SLH-DSA signing & verification support to SoftHSMv2.
+
 diff --git a/.gitignore b/.gitignore
 index 2859ec1..f894780 100644
 --- a/.gitignore

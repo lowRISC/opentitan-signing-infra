@@ -18,6 +18,7 @@ def _hsm_repos():
         patches = [
             Label("//third_party/hsm/patches:0001-Disable-filename-logging.patch"),
             Label("//third_party/hsm/patches:0002-Implement-SLH-DSA.patch"),
+            Label("//third_party/hsm/patches:0003-ckm-hash-slh-dsa.patch"),
         ],
         patch_args = ["-p1"],
     )
