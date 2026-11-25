@@ -26,11 +26,19 @@ exports_files(glob([
     "*.signed.bin",
 ]))
 
-filegroup(
-    name = "signed_rom_ext_binaries",
-    testonly = True,
-    srcs = glob(["rom_ext_dice_x509_slot_a*.app_prod_0.app_prod_0.signed.bin"]),
-)
+SPX_VARIANTS = {
+    "spx": (":fake_spx_keyset", ".signed.bin"),  # i.e. SPHINCS+
+    "slh_dsa": (":fake_slh_dsa_keyset", ".slh_dsa.signed.bin"),
+}
+
+[
+    filegroup(
+        name = "{}_signed_rom_ext_binaries".format(name),
+        testonly = True,
+        srcs = glob(["rom_ext_dice_x509_slot_a*.app_prod_0.app_prod_0{}".format(suffix)]),
+    )
+    for name, (_, suffix) in SPX_VARIANTS.items()
+]
 
 filegroup(
     name = "corrupted_signed_binary",
@@ -75,6 +83,7 @@ keyset(
         "@opentitan_devbundle//:fake_keys/app_test_ecdsa_p256.der": "app_test_0",
         "@opentitan_devbundle//:fake_keys/app_unauthorized_ecdsa_p256.der": "app_unauthorized_0",
     },
+    keytype = "ecdsa",
     profile = "local",
     tool = ":local_opentitantool",
 )
@@ -87,6 +96,20 @@ keyset(
         "@opentitan_devbundle//:fake_keys/app_prod_spx.pem": "app_prod_0",
         "@opentitan_devbundle//:fake_keys/app_dev_spx.pem": "app_dev_0:domain=PreHashedSha256",
     },
+    keytype = "spx",
+    profile = "local",
+    tool = ":local_opentitantool",
+)
+
+keyset(
+    name = "fake_slh_dsa_keyset",
+    testonly = True,
+    build_setting_default = "",
+    keys = {
+        "@opentitan_devbundle//:fake_keys/app_prod_slh_dsa.pem": "app_prod_0",
+        "@opentitan_devbundle//:fake_keys/app_dev_slh_dsa.pem": "app_dev_0",
+    },
+    keytype = "slh-dsa",
     profile = "local",
     tool = ":local_opentitantool",
 )
@@ -174,22 +197,27 @@ genrule(
 
 # Tests for (online) signing rules
 
-signature_test(
-    name = "verify_signature_test",
-    srcs = [
-        ":signed_rom_ext_binaries",
-    ],
-)
+[
+    signature_test(
+        name = "verify_{}_signature_test".format(name),
+        srcs = [
+            ":{}_signed_rom_ext_binaries".format(name),
+        ],
+    )
+    for name in SPX_VARIANTS.keys()
+]
 
-signature_test(
-    name = "valid_signature_test",
-    srcs = [
-        ":signed_rom_ext_binaries",
-    ],
-    ecdsa_key = {":fake_ecdsa_keyset": "app_prod_0"},
-    spx_domain = "Pure",
-    spx_key = {":fake_spx_keyset": "app_prod_0"},
-)
+[
+    signature_test(
+        name = "valid_{}_signature_test".format(name),
+        srcs = [
+            ":{}_signed_rom_ext_binaries".format(name),
+        ],
+        ecdsa_key = {":fake_ecdsa_keyset": "app_prod_0"},
+        spx_key = {spx_keyset: "app_prod_0"},
+    )
+    for name, (spx_keyset, _) in SPX_VARIANTS.items()
+]
 
 signature_test(
     name = "corrupt_signature_test",
@@ -202,41 +230,51 @@ signature_test(
 signature_test(
     name = "wrong_ecdsa_key_test",
     srcs = [
-        ":signed_rom_ext_binaries",
+        ":spx_signed_rom_ext_binaries",
     ],
     ecdsa_key = {":fake_ecdsa_keyset": "app_dev_0"},
     negative_test = True,
 )
 
-signature_test(
-    name = "wrong_spx_key_test",
-    srcs = [
-        ":signed_rom_ext_binaries",
-    ],
-    negative_test = True,
-    spx_key = {":fake_spx_keyset": "app_dev_0"},
-)
+[
+    signature_test(
+        name = "wrong_{}_key_test".format(name),
+        srcs = [
+            ":{}_signed_rom_ext_binaries".format(name),
+        ],
+        negative_test = True,
+        spx_key = {spx_keyset: "app_dev_0"},
+    )
+    for name, (spx_keyset, _) in SPX_VARIANTS.items()
+]
 
-signature_test(
-    name = "wrong_domain_test",
-    srcs = [
-        ":signed_rom_ext_binaries",
-    ],
-    ecdsa_key = {":fake_ecdsa_keyset": "app_prod_0"},
-    negative_test = True,
-    spx_domain = "PrehashedSha256",
-    spx_key = {":fake_spx_keyset": "app_prod_0"},
-)
+[
+    signature_test(
+        name = "wrong_{}_domain_test".format(name),
+        srcs = [
+            ":{}_signed_rom_ext_binaries".format(name),
+        ],
+        ecdsa_key = {":fake_ecdsa_keyset": "app_prod_0"},
+        negative_test = True,
+        spx_domain = "PrehashedSha256",
+        spx_key = {spx_keyset: "app_prod_0"},
+    )
+    for name, (spx_keyset, _) in SPX_VARIANTS.items()
+]
 
 test_suite(
     name = "signature_tests",
     tags = ["manual"],
     tests = [
         ":corrupt_signature_test",
-        ":valid_signature_test",
-        ":verify_signature_test",
-        ":wrong_domain_test",
+        ":valid_slh_dsa_signature_test",
+        ":valid_spx_signature_test",
+        ":verify_slh_dsa_signature_test",
+        ":verify_spx_signature_test",
         ":wrong_ecdsa_key_test",
+        ":wrong_slh_dsa_domain_test",
+        ":wrong_slh_dsa_key_test",
+        ":wrong_spx_domain_test",
         ":wrong_spx_key_test",
     ],
 )
@@ -294,14 +332,17 @@ ownership_signature_test(
 
 # Tests for offline signing rules
 
-# Offline test variants - maps names to (ecdsa_key name, optional spx_key name, optional spx_key domain).
+# Offline test variants - maps names to (ecdsa_key name, optional spx_key keyset,
+# optional spx_key name, optional spx_key domain).
 OFFLINE_TEST_VARIANTS = {
-    # No SPHINCS+ key signing, only ECDSA.
-    "ecdsa_only": ("app_dev_0", None, None),
+    # No SPHINCS+ / SLH-DSA key signing, only ECDSA.
+    "ecdsa_only": ("app_dev_0", None, None, None),
     # SPHINCS+ key signing with the `PreHashedSha256` domain.
-    "spx_prehashed": ("app_dev_0", "app_dev_0", "PrehashedSha256"),
-    # Sphincs+ key signing with the `Pure` domain.
-    "spx_pure": ("app_prod_0", "app_prod_0", "Pure"),
+    "spx_prehashed": ("app_dev_0", ":fake_spx_keyset", "app_dev_0", "PrehashedSha256"),
+    # SPHINCS+ key signing with the `Pure` domain.
+    "spx_pure": ("app_prod_0", ":fake_spx_keyset", "app_prod_0", "Pure"),
+    # SLH-DSA key signing with the `Pure` domain.
+    "slh_dsa_pure": ("app_prod_0", ":fake_slh_dsa_keyset", "app_prod_0", "Pure"),
 }
 
 # Local copies of the binary for offline signing tests to avoid name collision.
@@ -324,9 +365,9 @@ OFFLINE_TEST_VARIANTS = {
         ],
         ecdsa_key = {":fake_ecdsa_keyset": ecdsa_key},
         manifest = ":test_manifest",
-        spx_key = {":fake_spx_keyset": spx_key} if spx_key else None,
+        spx_key = {spx_keyset: spx_key} if spx_key else None,
     )
-    for name, (ecdsa_key, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+    for name, (ecdsa_key, spx_keyset, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
 ]
 
 [
@@ -338,7 +379,7 @@ OFFLINE_TEST_VARIANTS = {
         ],
         ecdsa_key = {":fake_ecdsa_keyset": ecdsa_key},
     )
-    for name, (ecdsa_key, _, _) in OFFLINE_TEST_VARIANTS.items()
+    for name, (ecdsa_key, _, _, _) in OFFLINE_TEST_VARIANTS.items()
 ]
 
 [
@@ -348,9 +389,9 @@ OFFLINE_TEST_VARIANTS = {
         srcs = [
             ":offline_presigning_artifacts_{}".format(name),
         ],
-        spx_key = {":fake_spx_keyset": spx_key},
+        spx_key = {spx_keyset: spx_key},
     )
-    for name, (_, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+    for name, (_, spx_keyset, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
     if spx_key
 ]
 
@@ -368,7 +409,7 @@ OFFLINE_TEST_VARIANTS = {
             ":offline_fake_spx_signature_{}".format(name),
         ] if spx_key else []),
     )
-    for name, (_, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+    for name, (_, _, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
 ]
 
 [
@@ -379,9 +420,9 @@ OFFLINE_TEST_VARIANTS = {
         ],
         ecdsa_key = {":fake_ecdsa_keyset": ecdsa_key},
         spx_domain = spx_domain,
-        spx_key = {":fake_spx_keyset": spx_key} if spx_key else None,
+        spx_key = {spx_keyset: spx_key} if spx_key else None,
     )
-    for name, (ecdsa_key, spx_key, spx_domain) in OFFLINE_TEST_VARIANTS.items()
+    for name, (ecdsa_key, spx_keyset, spx_key, spx_domain) in OFFLINE_TEST_VARIANTS.items()
 ]
 
 # SPHINCS+ / SLH-DSA signing uses a non-deterministic optrand, so we cannot expect the
@@ -405,7 +446,7 @@ OFFLINE_TEST_VARIANTS = {
             ":offline_signed_{}".format(name),
         ],
     )
-    for name, (ecdsa_key, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+    for name, (ecdsa_key, _, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
     if spx_key == None and ecdsa_key != None
 ]
 
@@ -417,7 +458,7 @@ test_suite(
         for name in OFFLINE_TEST_VARIANTS.keys()
     ] + [
         ":offline_signing_compare_test_{}".format(name)
-        for name, (ecdsa_key, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
+        for name, (ecdsa_key, _, spx_key, _) in OFFLINE_TEST_VARIANTS.items()
         if spx_key == None and ecdsa_key != None
     ],
 )

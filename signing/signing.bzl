@@ -36,17 +36,17 @@ def sign_binary(ctx, opentitantool, **kwargs):
       **kwargs: Overrides of values normally retrived from the context object.
         ecdsa_key: The ECDSA signing key.
         rsa_key: The RSA signing key.
-        spx_key: The SPHINCS+ signing key.
+        spx_key: The SPHINCS+ / SLH-DSA signing key.
         bin: The input binary.
         manifest: The manifest header.
     Returns:
         A dict of all of the signing artifacts:
           pre: The pre-signing binary (input binary with manifest changes applied).
           digest: The SHA256 hash over the pre-signing binary.
-          spxmsg: The SPHINCS+ message to be signed.
+          spxmsg: The SPHINCS+ / SLH-DSA message to be signed.
           ecdsa_sig: The ECDSA signature of the digest.
           rsa_sig: The RSA signature of the digest.
-          spx_sig: The SPHINCS+ signature over the message.
+          spx_sig: The SPHINCS+ / SLH-DSA signature over the message.
           signed: The final signed binary.
     """
     key_attr = get_override(ctx, "attr.ecdsa_key", kwargs)
@@ -130,7 +130,7 @@ sign_bin = rule(
         ),
         "spx_key": attr.label_keyed_string_dict(
             allow_files = True,
-            doc = "SPX public key to validate this image",
+            doc = "SPHINCS+ / SLH-DSA public key to validate this image",
         ),
         "manifest": attr.label(allow_single_file = True, mandatory = True),
     },

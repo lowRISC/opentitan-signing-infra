@@ -74,7 +74,7 @@ offline_presigning_artifacts = rule(
         "spx_key": attr.label_keyed_string_dict(
             providers = [[KeySetInfo], [DefaultInfo]],
             allow_files = True,
-            doc = "SPX public key to validate this image",
+            doc = "SPHINCS+ / SLH-DSA public key to validate this image",
         ),
     },
     toolchains = [
@@ -93,8 +93,8 @@ def _offline_fake_rsa_sign(ctx):
         if file.basename.endswith(".json"):
             continue
 
-        # Skip any SPHINCS+ messages if we're using the `Pure` domain instead of the `PreHashedSha256` domain
-        if file.basename.endswith(".spx-message"):
+        # Skip any SPHINCS+ / SLH-DSA messages if we're using the `Pure` domain instead of the `PreHashedSha256` domain
+        if file.basename.endswith(".spx-message") or file.basename.endswith(".slh_dsa-message"):
             continue
         _, sig, _ = local_sign(ctx, tool, file, None, rsa_key)
         outputs.append(sig)
@@ -126,8 +126,8 @@ def _offline_fake_ecdsa_sign(ctx):
         if file.basename.endswith(".json"):
             continue
 
-        # Skip any SPHINCS+ messages if we're using the `Pure` domain instead of the `PreHashedSha256` domain
-        if file.basename.endswith(".spx-message"):
+        # Skip any SPHINCS+ / SLH-DSA messages if we're using the `Pure` domain instead of the `PreHashedSha256` domain
+        if file.basename.endswith(".spx-message") or file.basename.endswith(".slh_dsa-message"):
             continue
         sig, _, _ = local_sign(ctx, tool, file, ecdsa_key, None)
         outputs.append(sig)
@@ -154,7 +154,12 @@ def _offline_fake_spx_sign(ctx):
     outputs = []
     spx_key = key_from_dict(ctx.attr.spx_key, "spx_key")
     spx_domain = spx_key.config.get("domain", "Pure")
-    expected_input_ext = ".digest" if spx_domain.lower() == "prehashedsha256" else ".spx-message"
+    keytype = spx_key.config.get("keytype", "spx").replace("-", "_")
+    if keytype not in ("spx", "slh_dsa"):
+        fail("The selected `spx_key` must be either the `spx` or `slh-dsa` keytype")
+    expected_input_ext = ".{}-message".format(keytype)
+    if spx_domain.lower() == "prehashedsha256":
+        expected_input_ext = ".digest"
     tool, _, _ = signing_tool_info(ctx, ctx.attr.spx_key, opentitantool)
     files = {}
     for file in ctx.files.srcs:
@@ -165,24 +170,24 @@ def _offline_fake_spx_sign(ctx):
             spx_sig = local_spx_sign(ctx, tool, file, spx_key)
             outputs.append(spx_sig)
     if not outputs:
-        fail("No SPHINCS+ messages found for SPX signing")
+        fail("No SPHINCS+ / SLH-DSA messages found for SPX signing. Are you using the right key?")
 
     return [DefaultInfo(files = depset(outputs), data_runfiles = ctx.runfiles(files = outputs))]
 
 offline_fake_spx_sign = rule(
     implementation = _offline_fake_spx_sign,
     attrs = {
-        "srcs": attr.label_list(allow_files = True, doc = "Digest files to sign"),
+        "srcs": attr.label_list(allow_files = True, doc = "Messages or digest files to sign"),
         "spx_key": attr.label_keyed_string_dict(
             allow_files = True,
             mandatory = True,
-            doc = "SPHINCS+ private key to sign this image",
+            doc = "SPHINCS+ / SLH-DSA private key to sign this image",
         ),
     },
     toolchains = [
         OPENTITANTOOL_TOOLCHAIN,
     ],
-    doc = "Create detached SPHINCS+ signatures using on-disk private keys via opentitantool.",
+    doc = "Create detached SPHINCS+ / SLH-DSA signatures using on-disk private keys via opentitantool.",
 )
 
 def _offline_signature_attach(ctx):
@@ -241,7 +246,7 @@ offline_signature_attach = rule(
         "srcs": attr.label_list(allow_files = True, providers = [[PreSigningBinaryInfo], [DefaultInfo]], doc = "Binary files to sign"),
         "ecdsa_signatures": attr.label_list(allow_files = True, doc = "ECDSA signed digest files"),
         "rsa_signatures": attr.label_list(allow_files = True, doc = "RSA signed digest files"),
-        "spx_signatures": attr.label_list(allow_files = True, doc = "SPX+ signed digest files"),
+        "spx_signatures": attr.label_list(allow_files = True, doc = "SPHINCS+ / SLH-DSA signed digest files"),
     },
     toolchains = [
         OPENTITANTOOL_TOOLCHAIN,

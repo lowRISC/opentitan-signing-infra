@@ -35,41 +35,51 @@ These steps still worked as of commit [`f55b9a296da51ec62a0d7d883ec36340e54d8ddf
        | xargs -I {} cp "$(bazelisk info execution_root)/{}" $SIGNING_REPO_PATH/signing/tests
     ```
 
-6. Build a Bazel target with a corrupted signature:
+6. Repeat steps 3 and 4 to create SLH-DSA signed binaries, using the fake `slh_dsa_keyset` instead of the fake `spx_keyset` in step 3.
+   These binaries have the same names as the SPHINCS+ signed binaries, so add an `.slh_dsa` suffix when copying them across:
+    ```sh
+    bazelisk cquery //sw/device/silicon_creator/rom_ext:rom_ext_dice_x509_slot_a 2>/dev/null \
+       | grep "rom_ext_dice_x509_slot_a_.*\.app_prod_0\.app_prod_0\.signed\.bin$" \
+       | while read -r f; do
+           cp "$(bazelisk info execution_root)/${f}" "$SIGNING_REPO_PATH/signing/tests/$(basename "${f}" .signed.bin).slh_dsa.signed.bin"
+         done
+    ```
+
+7. Build a Bazel target with a corrupted signature:
     ```sh
     bazelisk build //sw/device/silicon_creator/rom/e2e:empty_test_slot_a_corrupted_fpga_cw310_rom_with_fake_keys.prod_key_0.signed.bin
     ```
 
-7. Copy across and replace the existing corrupted binary:
+8. Copy across and replace the existing corrupted binary:
     ```sh
     bazelisk cquery //sw/device/silicon_creator/rom/e2e:empty_test_slot_a_corrupted_fpga_cw310_rom_with_fake_keys.prod_key_0.signed.bin 2>/dev/null \
        | xargs -I {} cp "$(bazelisk info execution_root)/{}" $SIGNING_REPO_PATH/signing/tests
     ```
 
-8. Build a Bazel target with the unsigned empty test binary:
+9. Build a Bazel target with the unsigned empty test binary:
     ```sh
     bazelisk build //sw/device/silicon_creator/rom/e2e:empty_test_slot_a_unsigned
     ```
 
-9.  Copy across and replace the existing unsigned test binary:
+10. Copy across and replace the existing unsigned test binary:
     ```sh
     bazelisk cquery //sw/device/silicon_creator/rom/e2e:empty_test_slot_a_unsigned 2>/dev/null \
        | grep "empty_test_slot_a_unsigned_fpga_cw310.bin" \
        | xargs -I {} cp "$(bazelisk info execution_root)/{}" $SIGNING_REPO_PATH/signing/tests
     ```
 
-10. Build a Bazel target for the ROM_EXT manifest:
+11. Build a Bazel target for the ROM_EXT manifest:
     ```sh
     bazelisk build //sw/device/silicon_creator/rom_ext:manifest
     ```
 
-11. Copy across and replace the existing `manifest.json`:
+12. Copy across and replace the existing `manifest.json`:
     ```sh
     bazelisk cquery //sw/device/silicon_creator/rom_ext:manifest 2>/dev/null \
        | xargs -I {} cp "$(bazelisk info execution_root)/{}" $SIGNING_REPO_PATH/signing/tests
     ```
 
-12. Verify that everything still works by running
+13. Verify that everything still works by running
     ```sh
     cd $SIGNING_REPO_PATH
     bazelisk test //signing/tests/...

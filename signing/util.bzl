@@ -105,7 +105,7 @@ def key_ext(ecdsa, rsa, spx):
     Args:
         ecdsa: struct; The ECDSA key.
         rsa: struct; The RSA key.
-        spx: struct; The SPHINCS+ key.
+        spx: struct; The SPHINCS+ / SLH-DSA key.
     Returns:
         str: The key extension.
     """
@@ -122,20 +122,29 @@ def key_ext(ecdsa, rsa, spx):
         return ".{}".format(name)
 
 def local_spx_sign(ctx, tool, spx_msg, spx_key):
-    """Sign a digest with a local on-disk SPHINCS+ private key.
+    """Sign a digest with a local on-disk SPHINCS+ / SLH-DSA private key.
 
     Args:
         ctx: The rule context.
         tool: SigningToolInfo; A provider referring to the opentitantool binary.
-        spx_msg: file; The SPHINCS+ message to be signed.
-        spx_key: struct; The SPHINCS+ private key.
+        spx_msg: file; The SPHINCS+ / SLH-DSA message to be signed.
+        spx_key: struct; The SPHINCS+ / SLH-DSA private key.
     Returns:
-        file: The SPHINCS+ signature file.
+        file: The SPHINCS+ / SLH-DSA signature file.
     """
     private_key = spx_key.file
-    spx_sig = ctx.actions.declare_file(paths.replace_extension(spx_msg.basename, ".spx_sig"))
+    keytype = spx_key.config.get("keytype", "spx").replace("-", "_")
+    if keytype not in ("spx", "slh_dsa"):
+        fail("The selected `spx_key` must be either the `spx` or `slh-dsa` keytype")
+    mnemonic = "".join([element.capitalize() for element in keytype.split("_")])
+    ext = ".{}_sig".format(keytype)
+    spx_sig = ctx.actions.declare_file(paths.replace_extension(spx_msg.basename, ext))
     domain = spx_key.config.get("domain", "Pure")
     rev = spx_key.config.get("byte-reversal-bug", "false")
+
+    # `opentitantool spx sign` handles both SPHINCS+ and SLH-DSA keys.
+    # It currently always dispatches to the `sphincsplus` reference implementation
+    # for its signing operations.
     ctx.actions.run(
         outputs = [spx_sig],
         inputs = [spx_msg, private_key],
@@ -151,7 +160,7 @@ def local_spx_sign(ctx, tool, spx_msg, spx_key):
             private_key.path,
         ],
         executable = tool.tool,
-        mnemonic = "LocalSpxSign",
+        mnemonic = "Local{}Sign".format(mnemonic),
     )
     return spx_sig
 
@@ -159,8 +168,8 @@ def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = N
     """Sign a digest with local on-disk private keys.
 
     Either ECDSA or RSA private keys are used for signing (but not both).
-    A SPHINCS+ key and message can additionally be specified to create additional
-    SPHINCS+ signature files.
+    A SPHINCS+ / SLH-DSA key and message can additionally be specified to create
+    additional SPHINCS+ / SLH-DSA signature files.
 
     Args:
         ctx: The rule context.
@@ -168,11 +177,11 @@ def local_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key = N
         digest: file; The digest of the binary to be signed.
         ecdsa_key: struct; The ECDSA private key.
         rsa_key: struct; The RSA private key.
-        spxmsg: file; The SPHINCS+ message to be signed.
-        spx_key: struct; The SPHINCS+ private key.
+        spxmsg: file; The SPHINCS+ / SLH-DSA message to be signed.
+        spx_key: struct; The SPHINCS+ / SLH-DSA private key.
         profile: str; The token profile. Intentionally unused by this function.
     Returns:
-        file, file, file: The ECDSA, RSA and SPHINCS+ signature files.
+        file, file, file: The ECDSA, RSA and SPHINCS+ / SLH-DSA signature files.
     """
     if rsa_key and ecdsa_key:
         fail("Only one of ECDSA or RSA key should be provided")
@@ -222,8 +231,8 @@ def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key =
     """Sign a digest with a token-provided private key.
 
     Either ECDSA or RSA private keys are used for signing (but not both).
-    A SPHINCS+ key and message can additionally be specified to create additional
-    SPHINCS+ signature files. An HSMtool profile must be provided.
+    A SPHINCS+ / SLH-DSA key and message can additionally be specified to create
+    additional SPHINCS+ / SLH-DSA signature files. An HSMtool profile must be provided.
 
     Args:
         ctx: The rule context.
@@ -231,11 +240,11 @@ def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key =
         digest: file; The digest of the binary to be signed.
         ecdsa_key: struct; The ECDSA private key.
         rsa_key: struct; The RSA private key.
-        spxmsg: file; The SPHINCS+ message to be signed.
-        spx_key: struct; The SPHINCS+ private key.
+        spxmsg: file; The SPHINCS+ / SLH-DSA message to be signed.
+        spx_key: struct; The SPHINCS+ / SLH-DSA private key.
         profile: str; The hsmtool profile.
     Returns:
-        file, file, file: The RSA and SPHINCS+ signature files.
+        file, file, file: The ECDSA, RSA and SPHINCS+ / SLH-DSA signature files.
     """
     if not profile:
         fail("Missing the `hsmtool` profile")
@@ -280,12 +289,14 @@ def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key =
 
     spx_sig = None
     if spxmsg and spx_key:
+        keytype = spx_key.config.get("keytype", "spx").replace("-", "_")
+        if keytype not in ("spx", "slh_dsa"):
+            fail("The selected `spx_key` must be either the `spx` or `slh-dsa` keytype")
         domain = spx_key.config.get("domain", "Pure")
         if domain.lower() == "prehashedsha256":
             rev = spx_key.config.get("byte-reversal-bug", "false")
             fmt = "sha256-hash-reversed" if rev == "true" else "sha256-hash"
             args = [
-                "--little-endian",
                 "--format={}".format(fmt),
                 "--domain={}".format(domain),
             ]
@@ -294,7 +305,9 @@ def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key =
                 "--format=plain-text",
                 "--domain={}".format(domain),
             ]
-        spx_sig = ctx.actions.declare_file(paths.replace_extension(spxmsg.basename, ".spx-sig"))
+        ext = ".{}-sig".format(keytype)
+        spx_sig = ctx.actions.declare_file(paths.replace_extension(spxmsg.basename, ext))
+        mnemonic = "".join([element.capitalize() for element in keytype.split("_")])
         ctx.actions.run(
             outputs = [spx_sig],
             inputs = [spxmsg, tool.tool] + tool.data,
@@ -302,7 +315,7 @@ def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key =
                 "--quiet",
                 "--lockfile=/tmp/hsmtool.lock",
                 "--profile={}".format(profile),
-                "spx",
+                keytype.replace("_", "-"),
                 "sign",
                 "--label={}".format(spx_key.name),
                 "--output={}".format(spx_sig.path),
@@ -313,7 +326,7 @@ def hsmtool_sign(ctx, tool, digest, ecdsa_key, rsa_key, spxmsg = None, spx_key =
                 "no-sandbox": "",
             },
             env = tool.env,
-            mnemonic = "HsmtoolSpxSign",
+            mnemonic = "Hsmtool{}Sign".format(mnemonic),
         )
 
     if rsa_key:

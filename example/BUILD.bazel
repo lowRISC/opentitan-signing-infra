@@ -26,6 +26,7 @@ keyset(
         "@opentitan_devbundle//:fake_keys/app_test_ecdsa_p256.der": "app_test_0",
         "@opentitan_devbundle//:fake_keys/app_unauthorized_ecdsa_p256.der": "app_unauthorized_0",
     },
+    keytype = "ecdsa",
     profile = "local",
     tool = ":local_opentitantool",
 )
@@ -38,6 +39,7 @@ keyset(
         "@opentitan_devbundle//:fake_keys/app_prod_spx.pem": "app_prod_0",
         "@opentitan_devbundle//:fake_keys/app_dev_spx.pem": "app_dev_0:domain=PreHashedSha256",
     },
+    keytype = "spx",
     profile = "local",
     tool = ":local_opentitantool",
 )
